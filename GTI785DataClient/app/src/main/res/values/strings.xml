@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">GTI785DataClient</string>
+    <string name="generate">Generate QR Code</string>
+</resources>
