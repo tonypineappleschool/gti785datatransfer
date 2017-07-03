@@ -2,6 +2,7 @@ package tonyd.gti785datatransfer;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -32,6 +33,9 @@ public class MainActivity extends Activity {
     private List<Pair> pairs;
     private ViewGroup linearLayout;
 
+    /* For sending requests to the server */
+    private RequestAsyncTask request;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -56,6 +60,7 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "Scanned: " + result.getContents(), Toast.LENGTH_LONG).show();
                 Pair pair = parse(result.getContents());
                 addPair(pair);
+                sendRequest(pair.getIp(), Integer.toString(pair.getPort()));
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
@@ -90,7 +95,6 @@ public class MainActivity extends Activity {
 
 
     private void addPair(Pair pair) {
-
         Button pairButton = new Button(this);
         pairButton.setText(pair.getName());
         pairButton.setLayoutParams(new LinearLayout.LayoutParams(
@@ -117,5 +121,10 @@ public class MainActivity extends Activity {
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void sendRequest(String ipAddress, String port) {
+        request = new RequestAsyncTask(this, ipAddress, port);
+        request.execute();
     }
 }
