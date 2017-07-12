@@ -1,16 +1,27 @@
 package tonyd.gti785datatransfer;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -31,10 +42,15 @@ import java.util.List;
 public class MainActivity extends Activity {
 
     private List<Pair> pairs;
+    private List<PairUI> pairsUI;
     private ViewGroup linearLayout;
+    private Location currentLocation;
 
     /* For sending requests to the server */
     private RequestAsyncTask request;
+
+    /* For receiving broadcast messages from AsynctaskRequest */
+    private BroadcastReceiver receiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,6 +58,51 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         linearLayout = (ViewGroup) findViewById(R.id.linear_layout_main);
         pairs = new ArrayList<>();
+        pairsUI = new ArrayList<>();
+
+        receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String command = intent.getStringExtra(Command.LOCATION);
+                switch (command) {
+                    case Command.LOCATION:
+                        int pairID = intent.getIntExtra("pairID", -1);
+                        Location location = intent.getParcelableExtra("location");
+                        pairs.get(pairID).getLocation().setLatitude(location.getLatitude());
+                        pairs.get(pairID).getLocation().setLongitude(location.getLongitude());
+                        // Update UI
+                        float distance = currentLocation.distanceTo(location);
+                        pairsUI.get(pairID).getTextViewDistance().setText(Float.toString(distance));
+                        break;
+                }
+            }
+        };
+
+        // Acquire a reference to the system Location Manager
+        LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+
+        // Define a listener that responds to location updates
+        LocationListener locationListener = new LocationListener() {
+            public void onLocationChanged(Location location) {
+                // Called when a new location is found by the network location provider.
+                currentLocation = location;
+            }
+
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+            }
+
+            public void onProviderEnabled(String provider) {
+            }
+
+            public void onProviderDisabled(String provider) {
+            }
+        };
+
+        // Register the listener with the Location Manager to receive location updates
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
     }
 
     private void capture() {
@@ -59,8 +120,10 @@ public class MainActivity extends Activity {
             } else {
                 Toast.makeText(this, "Scanned: " + result.getContents(), Toast.LENGTH_LONG).show();
                 Pair pair = parse(result.getContents());
+                pairs.add(pair);
+                int pairID = pairs.indexOf(pair);
                 addPair(pair);
-                sendRequest(pair.getIp(), Integer.toString(pair.getPort()));
+                sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()));
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
@@ -90,19 +153,38 @@ public class MainActivity extends Activity {
                 port,
                 lastAccessedDate);
         return pair;
-
     }
 
-
     private void addPair(Pair pair) {
+        LinearLayout LL = new LinearLayout(this);
+        LL.setBackgroundColor(Color.CYAN);
+        LL.setOrientation(LinearLayout.VERTICAL);
+        LayoutParams LLParams = new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
+        LL.setLayoutParams(LLParams);
+
+        TextView textViewName = new TextView(this);
+        textViewName.setText(pair.getName());
+        LayoutParams TVParams = new LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.MATCH_PARENT);
+        textViewName.setLayoutParams(TVParams);
+        LL.addView(textViewName);
+
+        TextView textViewDistance = new TextView(this);
+        textViewDistance.setText('0');
+        textViewDistance.setLayoutParams(TVParams);
+        LL.addView(textViewDistance);
+
         Button pairButton = new Button(this);
         pairButton.setText(pair.getName());
-        pairButton.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT));
+        pairButton.setLayoutParams(new LayoutParams(
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.MATCH_PARENT));
         pairButton.setPadding(10,10,10,10);
         pairButton.setTextSize(13.0f);
-        linearLayout.addView(pairButton);
+        LL.addView(pairButton);
+
+        PairUI pairUI = new PairUI(textViewName, textViewDistance, pairButton);
+        pairsUI.add(pairUI);
+        linearLayout.addView(LL);
     }
 
     @Override
@@ -123,8 +205,8 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void sendRequest(String ipAddress, String port) {
-        request = new RequestAsyncTask(this, ipAddress, port);
+    private void sendRequest(int pairID, String ipAddress, String port) {
+        request = new RequestAsyncTask(this, pairID, ipAddress, port);
         request.execute();
     }
 }
