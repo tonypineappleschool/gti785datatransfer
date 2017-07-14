@@ -3,4 +3,6 @@
     <string name="capture">Capture</string>
     <string name="register">Register</string>
     <string name="registered_devices">Registered Devices</string>
+    <string name="sortByName">Sort (Name)</string>
+    <string name="sortByDistance">Sort (Distance)</string>
 </resources>

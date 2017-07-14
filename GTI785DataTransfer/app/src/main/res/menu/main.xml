@@ -3,4 +3,10 @@
     <item android:id="@+id/register"
         android:title="@string/register"
         android:showAsAction="ifRoom"/>
+    <item android:id="@+id/sortByName"
+        android:title="@string/sortByName"
+        android:showAsAction="ifRoom"/>
+    <item android:id="@+id/sortByDistance"
+        android:title="@string/sortByDistance"
+        android:showAsAction="ifRoom"/>
 </menu>

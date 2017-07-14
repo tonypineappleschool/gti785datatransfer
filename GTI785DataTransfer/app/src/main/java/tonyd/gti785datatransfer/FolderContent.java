@@ -1,12 +1,16 @@
 package tonyd.gti785datatransfer;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Created by stefaniekoy on 2017-06-28.
  */
 
-public class FolderContent {
+public class FolderContent implements Parcelable {
 
     private List<Folder> folders;
     private List<File> files;
@@ -40,4 +44,31 @@ public class FolderContent {
                 '}';
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeList(folders);
+        dest.writeList(files);
+    }
+
+    public static final Parcelable.Creator CREATOR = new Parcelable.Creator() {
+        public FolderContent createFromParcel(Parcel in) {
+            return new FolderContent(in);
+        }
+
+        public FolderContent[] newArray(int size) {
+            return new FolderContent[size];
+        }
+    };
+
+    private FolderContent(Parcel in) {
+        folders = new ArrayList<>();
+        files = new ArrayList<>();
+        in.readList(folders, null);
+        in.readList(files, null);
+    }
 }

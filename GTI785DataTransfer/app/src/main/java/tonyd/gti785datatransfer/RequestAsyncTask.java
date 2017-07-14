@@ -52,9 +52,10 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
     @Override
     protected String doInBackground(String... params) {
         try {
-            URL url = new URL(baseUrl);
+            String command = params[0];
+            URL url = URLbuilt(params);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setReadTimeout(10000);
+            conn.setReadTimeout(60 * 1000);
             conn.setConnectTimeout(5000);
             String method = "GET";
             conn.setRequestMethod(method);
@@ -62,11 +63,25 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
             Log.d("RESPONSE CODE", Integer.toString(responseCode));
 
             if (responseCode == 200){
-                BufferedReader in = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream()));
-                Gson gson = new Gson();
-                Location location = gson.fromJson(in, Location.class);
-                updateLocation(location, pairID);
+                if (command.equals(Command.POLL)){
+                    BufferedReader in = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream()));
+                    Gson gson = new Gson();
+                    Location location = gson.fromJson(in, Location.class);
+                    updateLocation(location, pairID);
+                } else if (command.equals(Command.FILE)) {
+                    String contentType = conn.getContentType();
+                    if (contentType.equals("application/octet-stream")) {
+                        // it is a file
+                    } else {
+                        // it is a directory
+                        BufferedReader in = new BufferedReader(
+                                new InputStreamReader(conn.getInputStream()));
+                        Gson gson = new Gson();
+                        FolderContent folderContent = gson.fromJson(in, FolderContent.class);
+                        updateView(folderContent);
+                    }
+                }
             }
         } catch (MalformedURLException e) {
             e.printStackTrace();
@@ -78,6 +93,21 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
 
         return null;
 
+    }
+
+    private void updateView(FolderContent folderContent) {
+        Intent intent = new Intent(Command.COMMAND);
+        intent.putExtra(Command.COMMAND, Command.FOLDERCONTENT);
+        intent.putExtra("folderContent", folderContent);
+        broadcaster.sendBroadcast(intent);
+    }
+
+    private URL URLbuilt(String[] params) throws MalformedURLException {
+        String command = params[0];
+        URL url = new URL(baseUrl);
+        String relURL;
+        relURL = "/" + command;
+        return new URL(url, relURL);
     }
 
     private void updateLocation(Location location, int pairID) {

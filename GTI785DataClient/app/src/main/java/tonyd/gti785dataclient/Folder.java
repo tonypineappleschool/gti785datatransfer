@@ -1,4 +1,4 @@
-package tonyd.gti785datatransfer;
+package tonyd.gti785dataclient;
 
 import java.util.Date;
 

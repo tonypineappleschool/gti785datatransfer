@@ -36,8 +36,12 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+
+import static tonyd.gti785datatransfer.Command.COMMAND;
+import static tonyd.gti785datatransfer.Command.POLL;
 
 public class MainActivity extends Activity {
 
@@ -63,17 +67,21 @@ public class MainActivity extends Activity {
         receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                String command = intent.getStringExtra(Command.LOCATION);
+                String command = intent.getStringExtra(Command.COMMAND);
                 switch (command) {
-                    case Command.LOCATION:
+                    case Command.POLL:
                         int pairID = intent.getIntExtra("pairID", -1);
-                        Location location = intent.getParcelableExtra("location");
+                        Location location = intent.getParcelableExtra(Command.LOCATION);
                         pairs.get(pairID).getLocation().setLatitude(location.getLatitude());
                         pairs.get(pairID).getLocation().setLongitude(location.getLongitude());
                         // Update UI
                         float distance = currentLocation.distanceTo(location);
                         pairsUI.get(pairID).getTextViewDistance().setText(Float.toString(distance));
                         break;
+                    case Command.FOLDERCONTENT:
+                        // Display files
+                        FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT);
+
                 }
             }
         };
@@ -107,7 +115,7 @@ public class MainActivity extends Activity {
 
     private void capture() {
         IntentIntegrator integrator = new IntentIntegrator(this);
-        integrator.setOrientationLocked(false);
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE_TYPES);
         integrator.initiateScan();
     }
 
@@ -123,7 +131,7 @@ public class MainActivity extends Activity {
                 pairs.add(pair);
                 int pairID = pairs.indexOf(pair);
                 addPair(pair);
-                sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()));
+                sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), POLL, "");
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
@@ -157,8 +165,7 @@ public class MainActivity extends Activity {
 
     private void addPair(Pair pair) {
         LinearLayout LL = new LinearLayout(this);
-        LL.setBackgroundColor(Color.CYAN);
-        LL.setOrientation(LinearLayout.VERTICAL);
+        LL.setOrientation(LinearLayout.HORIZONTAL);
         LayoutParams LLParams = new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
         LL.setLayoutParams(LLParams);
 
@@ -169,7 +176,7 @@ public class MainActivity extends Activity {
         LL.addView(textViewName);
 
         TextView textViewDistance = new TextView(this);
-        textViewDistance.setText('0');
+        textViewDistance.setText("0");
         textViewDistance.setLayoutParams(TVParams);
         LL.addView(textViewDistance);
 
@@ -180,6 +187,12 @@ public class MainActivity extends Activity {
                 LayoutParams.MATCH_PARENT));
         pairButton.setPadding(10,10,10,10);
         pairButton.setTextSize(13.0f);
+        pairButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+            }
+        });
         LL.addView(pairButton);
 
         PairUI pairUI = new PairUI(textViewName, textViewDistance, pairButton);
@@ -200,13 +213,49 @@ public class MainActivity extends Activity {
             case R.id.register:
                 capture();
                 return true;
+            case R.id.sortByName:
+                sortByName();
+                return true;
+            case R.id.sortByDistance:
+                sortByDistance();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
 
-    private void sendRequest(int pairID, String ipAddress, String port) {
+    private void sortByName() {
+        Collections.sort(pairsUI, PairUI.COMPARE_BY_NAME);
+        linearLayout.removeAllViews();
+        for (PairUI pairUI : pairsUI){
+            LinearLayout LL = new LinearLayout(this);
+            LL.setOrientation(LinearLayout.HORIZONTAL);
+            LayoutParams LLParams = new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
+            LL.setLayoutParams(LLParams);
+            LL.addView(pairUI.getTextViewName());
+            LL.addView(pairUI.getTextViewDistance());
+            LL.addView(pairUI.getButton());
+            linearLayout.addView(LL);
+        }
+    }
+
+    private void sortByDistance() {
+        Collections.sort(pairsUI, PairUI.COMPARE_BY_DISTANCE);
+        linearLayout.removeAllViews();
+        for (PairUI pairUI : pairsUI){
+            LinearLayout LL = new LinearLayout(this);
+            LL.setOrientation(LinearLayout.HORIZONTAL);
+            LayoutParams LLParams = new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
+            LL.setLayoutParams(LLParams);
+            LL.addView(pairUI.getTextViewName());
+            LL.addView(pairUI.getTextViewDistance());
+            LL.addView(pairUI.getButton());
+            linearLayout.addView(LL);
+        }
+    }
+
+    private void sendRequest(int pairID, String ipAddress, String port, String command, String param) {
         request = new RequestAsyncTask(this, pairID, ipAddress, port);
-        request.execute();
+        request.execute(command, param);
     }
 }
