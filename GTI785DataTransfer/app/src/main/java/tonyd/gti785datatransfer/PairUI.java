@@ -11,11 +11,13 @@ import java.util.Comparator;
  */
 
 public class PairUI {
+    private Pair pair;
     private TextView textViewName;
     private TextView textViewDistance;
     private Button button;
 
-    public PairUI(TextView textViewName, TextView textViewDistance, Button button) {
+    public PairUI(Pair pair, TextView textViewName, TextView textViewDistance, Button button) {
+        this.pair = pair;
         this.textViewName = textViewName;
         this.textViewDistance = textViewDistance;
         this.button = button;
@@ -71,4 +73,12 @@ public class PairUI {
             return returnVal;
         }
     };
+
+    public Pair getPair() {
+        return pair;
+    }
+
+    public void setPair(Pair pair) {
+        this.pair = pair;
+    }
 }

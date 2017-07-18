@@ -12,7 +12,9 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -32,6 +34,7 @@ import com.google.gson.JsonParser;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
+import java.io.*;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -44,7 +47,9 @@ import static tonyd.gti785datatransfer.Command.COMMAND;
 import static tonyd.gti785datatransfer.Command.POLL;
 
 public class MainActivity extends Activity {
+    static boolean active = false;
 
+    private static final int REQUEST_LOCATION = 1;
     private List<Pair> pairs;
     private List<PairUI> pairsUI;
     private ViewGroup linearLayout;
@@ -69,19 +74,26 @@ public class MainActivity extends Activity {
             public void onReceive(Context context, Intent intent) {
                 String command = intent.getStringExtra(Command.COMMAND);
                 switch (command) {
-                    case Command.POLL:
+                    case Command.LOCATION:
                         int pairID = intent.getIntExtra("pairID", -1);
                         Location location = intent.getParcelableExtra(Command.LOCATION);
                         pairs.get(pairID).getLocation().setLatitude(location.getLatitude());
                         pairs.get(pairID).getLocation().setLongitude(location.getLongitude());
                         // Update UI
-                        float distance = currentLocation.distanceTo(location);
-                        pairsUI.get(pairID).getTextViewDistance().setText(Float.toString(distance));
+                        if (currentLocation != null) {
+                            float distance[] =  new float[1];
+                            Location.distanceBetween(currentLocation.getLatitude(), currentLocation.getLongitude(),
+                                    location.getLatitude(), location.getLongitude(), distance);
+                            pairsUI.get(pairID).getTextViewDistance().setText(Float.toString(distance[0]));
+                        }
                         break;
                     case Command.FOLDERCONTENT:
-                        // Display files
-                        FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT);
-
+                        if (active) {
+                            // Display files
+                            pairID = intent.getIntExtra("pairID", -1);
+                            FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT);
+                            startFolderContentActivity(folderContent, pairID);
+                        }
                 }
             }
         };
@@ -94,6 +106,12 @@ public class MainActivity extends Activity {
             public void onLocationChanged(Location location) {
                 // Called when a new location is found by the network location provider.
                 currentLocation = location;
+                for (PairUI pairUI : pairsUI){
+                    float distance[] =  new float[1];
+                    Location.distanceBetween(currentLocation.getLatitude(), currentLocation.getLongitude(),
+                            pairUI.getPair().getLocation().getLatitude(), pairUI.getPair().getLocation().getLongitude(), distance);
+                    pairUI.getTextViewDistance().setText(Float.toString(distance[0]));
+                }
             }
 
             public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -108,15 +126,58 @@ public class MainActivity extends Activity {
 
         // Register the listener with the Location Manager to receive location updates
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
+            // Check Permissions Now
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    REQUEST_LOCATION);
         }
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
+        currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        active = true;
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        active = false;
+    }
+
+    private void startFolderContentActivity(FolderContent folderContent, int pairID) {
+        Intent intentActivity = new Intent(this, FolderContentActivity.class);
+        intentActivity.putExtra(Command.FOLDERCONTENT, folderContent);
+        intentActivity.putExtra(Command.PAIR, pairs.get(pairID));
+        intentActivity.putExtra(Command.PAIRID, pairID);
+        startActivity(intentActivity);
     }
 
     private void capture() {
-        IntentIntegrator integrator = new IntentIntegrator(this);
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE_TYPES);
-        integrator.initiateScan();
+//        IntentIntegrator integrator = new IntentIntegrator(this);
+//        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE_TYPES);
+//        integrator.initiateScan();
+
+        // TEMP
+        DateFormat df = new SimpleDateFormat("mm/dd/yyyy");
+        Date lastAccessedDate = new Date();
+        try {
+            Pair pair = new Pair(123456,
+                    "tony",
+                    "192.168.43.182",
+                    5000,
+                    df.parse("09/09/1999"));
+            pairs.add(pair);
+            int pairID = pairs.indexOf(pair);
+            addPair(pair);
+            sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), POLL, "");
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override
@@ -163,7 +224,7 @@ public class MainActivity extends Activity {
         return pair;
     }
 
-    private void addPair(Pair pair) {
+    private void addPair(final Pair pair) {
         LinearLayout LL = new LinearLayout(this);
         LL.setOrientation(LinearLayout.HORIZONTAL);
         LayoutParams LLParams = new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
@@ -173,11 +234,14 @@ public class MainActivity extends Activity {
         textViewName.setText(pair.getName());
         LayoutParams TVParams = new LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.MATCH_PARENT);
         textViewName.setLayoutParams(TVParams);
+        textViewName.setPadding(10,10,10,10);
+
         LL.addView(textViewName);
 
         TextView textViewDistance = new TextView(this);
         textViewDistance.setText("0");
         textViewDistance.setLayoutParams(TVParams);
+        textViewDistance.setPadding(10,10,10,10);
         LL.addView(textViewDistance);
 
         Button pairButton = new Button(this);
@@ -190,12 +254,13 @@ public class MainActivity extends Activity {
         pairButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                int pairID = pairs.indexOf(pair);
+                sendRequest(pairID, pair.getIp(), "4000", Command.FILES, "");
             }
         });
         LL.addView(pairButton);
 
-        PairUI pairUI = new PairUI(textViewName, textViewDistance, pairButton);
+        PairUI pairUI = new PairUI(pair, textViewName, textViewDistance, pairButton);
         pairsUI.add(pairUI);
         linearLayout.addView(LL);
     }
@@ -256,6 +321,26 @@ public class MainActivity extends Activity {
 
     private void sendRequest(int pairID, String ipAddress, String port, String command, String param) {
         request = new RequestAsyncTask(this, pairID, ipAddress, port);
+        request.getBroadcaster().registerReceiver(receiver, new IntentFilter(Command.COMMAND));
         request.execute(command, param);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_LOCATION: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Start the WebService to handle the server in a different thread
+                    Toast.makeText(getApplicationContext(), "Permission Location granted",
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                return;
+            }
+        }
     }
 }

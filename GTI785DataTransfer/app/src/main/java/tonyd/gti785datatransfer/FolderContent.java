@@ -51,8 +51,8 @@ public class FolderContent implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeList(folders);
-        dest.writeList(files);
+        dest.writeTypedList(folders);
+        dest.writeTypedList(files);
     }
 
     public static final Parcelable.Creator CREATOR = new Parcelable.Creator() {
@@ -68,7 +68,7 @@ public class FolderContent implements Parcelable {
     private FolderContent(Parcel in) {
         folders = new ArrayList<>();
         files = new ArrayList<>();
-        in.readList(folders, null);
-        in.readList(files, null);
+        in.readTypedList(folders, Folder.CREATOR);
+        in.readTypedList(files, File.CREATOR);
     }
 }

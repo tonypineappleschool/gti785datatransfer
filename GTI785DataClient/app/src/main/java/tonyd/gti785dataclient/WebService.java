@@ -28,7 +28,8 @@ public class WebService extends Service {
 
     private static final int REQUEST_LOCATION = 1;
     private final IBinder mBinder = new MyBinder();
-    private Server server;
+    private ServerLocation serverLocation;
+    private ServerFiles serverFiles;
     private WebServiceCallbacks webServiceCallbacks;
     private LocalBroadcastManager broadcaster;
     private LocationManager locationManager;
@@ -50,16 +51,16 @@ public class WebService extends Service {
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
-                if (deviceLocation.distanceTo(location) > 5.0f) {
+                // if (deviceLocation != null /* || deviceLocation.distanceTo(location) > 5.0f */) {
                     deviceLocation = location;
-                    if (server.getLbq() != null) {
+                    if (serverLocation.getLbq() != null) {
                         try {
-                            server.getLbq().put(deviceLocation);
+                            serverLocation.getLbq().put(deviceLocation);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                     }
-                }
+
             }
 
             public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -78,8 +79,8 @@ public class WebService extends Service {
             // Check Permissions Now
             return;
         }
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-        deviceLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
+        deviceLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
     }
 
 
@@ -89,21 +90,23 @@ public class WebService extends Service {
     public IBinder onBind(Intent intent) {
         WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
         String ipAddress = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
-        server = new Server(this, getApplicationContext(), ipAddress);
+        serverLocation = new ServerLocation(this, getApplicationContext(), ipAddress);
+        serverFiles = new ServerFiles(this, getApplicationContext(), ipAddress);
         try {
-            server.start();
+            serverLocation.start();
+            serverFiles.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Toast.makeText(this, "Service listening on port " + server.getListeningPort(), Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Service listening on port " + serverLocation.getListeningPort(), Toast.LENGTH_LONG).show();
         return mBinder;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        server.closeAllConnections();
-        server.stop();
+        serverLocation.closeAllConnections();
+        serverLocation.stop();
     }
 
     public LocalBroadcastManager getBroadcaster() {

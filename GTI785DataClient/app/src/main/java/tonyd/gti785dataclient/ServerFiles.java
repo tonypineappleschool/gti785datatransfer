@@ -23,16 +23,15 @@ import java.util.concurrent.TimeUnit;
  * Created by tonyd on 5/25/2017.
  */
 
-public class Server extends NanoHTTPD {
+public class ServerFiles extends NanoHTTPD {
 
     private static final String ipaddress = "192.168.43.182";
-    private static final int port = 5000;
+    private static final int port = 4000;
 
     private WebService service;
     private Context context;
-    private LinkedBlockingQueue lbq;
 
-    public Server(WebService wb, Context context, String ipaddress) {
+    public ServerFiles(WebService wb, Context context, String ipaddress) {
         super(ipaddress, port);
         service = wb;
         this.context = context;
@@ -47,11 +46,10 @@ public class Server extends NanoHTTPD {
         switch (command) {
             case Command.FILES:
                 String path = "";
-                for (int i = 1 ; i > separated.length ; i++){
-                    path += separated[i] + "/";
+                for (int i = 1 ; i < separated.length ; i++){
+                    path += "/" + separated[i];
                 }
-                // Remove the last slash
-                path = path.substring(0, path.length()-1);
+
                 String finalPath = Environment.getExternalStorageDirectory().getAbsolutePath() + path;
                 File pathFile = new File(finalPath);
                 if (pathFile.isFile()){
@@ -85,35 +83,8 @@ public class Server extends NanoHTTPD {
                     String serializedFolderContent = gson.toJson(folderContent);
                     return Response.newFixedLengthResponse(serializedFolderContent);
                 }
-            case Command.POLL:
-                Gson gson = new Gson();
-                lbq = new LinkedBlockingQueue();
-                Object o = null;
-                try {
-                    // wait for 60 s for there to be an object in the queue
-                    o = lbq.poll(60, TimeUnit.SECONDS);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                if (o == null){
-                    Log.d("LBQ", "Poll returns null");
-                } else {
-                    String serializedObject = gson.toJson(o);
-                    lbq = null;
-                    return Response.newFixedLengthResponse(serializedObject);
-                }
-                lbq = null;
-                return Response.newFixedLengthResponse("8000");
         }
-        return Response.newFixedLengthResponse("8000");
-    }
-
-    public LinkedBlockingQueue getLbq() {
-        return lbq;
-    }
-
-    public void setLbq(LinkedBlockingQueue lbq) {
-        this.lbq = lbq;
+        return Response.newFixedLengthResponse(Status.REQUEST_TIMEOUT, "text/html", "timeout");
     }
 
     /* Utilities */

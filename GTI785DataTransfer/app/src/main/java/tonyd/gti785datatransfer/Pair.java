@@ -1,12 +1,15 @@
 package tonyd.gti785datatransfer;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.util.Date;
 
 /**
  * Created by stefaniekoy on 2017-06-28.
  */
 
-public class Pair {
+public class Pair implements Parcelable {
 
     private int id;
     private String name;
@@ -23,6 +26,27 @@ public class Pair {
         this.lastAccessed = lastAccessed;
         this.location = new Location(0.0, 0.0);
     }
+
+    protected Pair(Parcel in) {
+        id = in.readInt();
+        name = in.readString();
+        ip = in.readString();
+        port = in.readInt();
+        lastAccessed = new Date(in.readLong());
+        location = in.readParcelable(Location.class.getClassLoader());
+    }
+
+    public static final Creator<Pair> CREATOR = new Creator<Pair>() {
+        @Override
+        public Pair createFromParcel(Parcel in) {
+            return new Pair(in);
+        }
+
+        @Override
+        public Pair[] newArray(int size) {
+            return new Pair[size];
+        }
+    };
 
     public int getId() {
         return id;
@@ -84,7 +108,22 @@ public class Pair {
                 '}';
     }
 
-    public class Location {
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeInt(id);
+        dest.writeString(name);
+        dest.writeString(ip);
+        dest.writeInt(port);
+        dest.writeLong(lastAccessed.getTime());
+        dest.writeParcelable(location, flags);
+    }
+
+    public static class Location implements Parcelable{
         private double longitude;
         private double latitude;
 
@@ -92,6 +131,23 @@ public class Pair {
             this.longitude = longitude;
             this.latitude = latitude;
         }
+
+        protected Location(Parcel in) {
+            longitude = in.readDouble();
+            latitude = in.readDouble();
+        }
+
+        public static final Creator<Location> CREATOR = new Creator<Location>() {
+            @Override
+            public Location createFromParcel(Parcel in) {
+                return new Location(in);
+            }
+
+            @Override
+            public Location[] newArray(int size) {
+                return new Location[size];
+            }
+        };
 
         public double getLongitude() {
             return longitude;
@@ -115,6 +171,17 @@ public class Pair {
                     "longitude=" + longitude +
                     ", latitude=" + latitude +
                     '}';
+        }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeDouble(longitude);
+            dest.writeDouble(latitude);
         }
     }
 

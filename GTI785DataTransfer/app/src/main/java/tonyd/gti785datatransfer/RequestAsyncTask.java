@@ -27,6 +27,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
     private String ipAddress;
     private String port;
     private int pairID;
+    private String command;
 
     public LocalBroadcastManager getBroadcaster() {
         return broadcaster;
@@ -41,7 +42,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
         this.pairID = pairID;
         this.ipAddress = ipAddress;
         this.port = port;
-        baseUrl = "http://" + ipAddress + ":" + port + "/";
+        baseUrl = "http://" + ipAddress + ":" + port;
     }
 
     @Override
@@ -52,7 +53,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
     @Override
     protected String doInBackground(String... params) {
         try {
-            String command = params[0];
+            command = params[0];
             URL url = URLbuilt(params);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setReadTimeout(60 * 1000);
@@ -64,12 +65,14 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
 
             if (responseCode == 200){
                 if (command.equals(Command.POLL)){
+                    String responseMessage = conn.getResponseMessage();
+
                     BufferedReader in = new BufferedReader(
                             new InputStreamReader(conn.getInputStream()));
                     Gson gson = new Gson();
                     Location location = gson.fromJson(in, Location.class);
                     updateLocation(location, pairID);
-                } else if (command.equals(Command.FILE)) {
+                } else if (command.equals(Command.FILES)) {
                     String contentType = conn.getContentType();
                     if (contentType.equals("application/octet-stream")) {
                         // it is a file
@@ -79,7 +82,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
                                 new InputStreamReader(conn.getInputStream()));
                         Gson gson = new Gson();
                         FolderContent folderContent = gson.fromJson(in, FolderContent.class);
-                        updateView(folderContent);
+                        updateView(folderContent, pairID);
                     }
                 }
             }
@@ -95,24 +98,27 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
 
     }
 
-    private void updateView(FolderContent folderContent) {
+    private void updateView(FolderContent folderContent, int pairID) {
         Intent intent = new Intent(Command.COMMAND);
         intent.putExtra(Command.COMMAND, Command.FOLDERCONTENT);
         intent.putExtra("folderContent", folderContent);
+        intent.putExtra("pairID", pairID);
         broadcaster.sendBroadcast(intent);
     }
 
     private URL URLbuilt(String[] params) throws MalformedURLException {
         String command = params[0];
         URL url = new URL(baseUrl);
-        String relURL;
-        relURL = "/" + command;
+        String relURL = "";
+        for (String s : params){
+            relURL += "/" + s;
+        }
         return new URL(url, relURL);
     }
 
     private void updateLocation(Location location, int pairID) {
-        Intent intent = new Intent(Command.LOCATION);
-        intent.putExtra(Command.LOCATION, Command.LOCATION);
+        Intent intent = new Intent(Command.COMMAND);
+        intent.putExtra(Command.COMMAND, Command.LOCATION);
         intent.putExtra("location", location);
         intent.putExtra("pairID", pairID);
         broadcaster.sendBroadcast(intent);
@@ -124,7 +130,8 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
     }
 
     private void sendRequest() {
-        new RequestAsyncTask(context, pairID, ipAddress, port).execute();
+        if (command == Command.POLL)
+            new RequestAsyncTask(context, pairID, ipAddress, port).execute(Command.POLL, "");
     }
 
 }
