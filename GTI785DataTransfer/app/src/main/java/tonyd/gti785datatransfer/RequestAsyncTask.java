@@ -92,10 +92,21 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+            setConnected(pairID, false);
+
         }
 
         return null;
 
+    }
+
+    private void setConnected(int pairID, boolean connected) {
+        if (!connected){
+            Intent intent = new Intent(Command.COMMAND);
+            intent.putExtra(Command.COMMAND, Command.DISCONNECTED);
+            intent.putExtra("pairID", pairID);
+            broadcaster.sendBroadcast(intent);
+        }
     }
 
     private void updateView(FolderContent folderContent, int pairID) {

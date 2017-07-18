@@ -72,8 +72,12 @@ public class MainActivity extends Activity {
             public void onReceive(Context context, Intent intent) {
                 String command = intent.getStringExtra(Command.COMMAND);
                 switch (command) {
-                    case Command.LOCATION:
+                    case Command.DISCONNECTED:
                         int pairID = intent.getIntExtra("pairID", -1);
+                        pairsUI.get(pairID).getButton().setBackgroundColor(Color.RED);
+                        break;
+                    case Command.LOCATION:
+                        pairID = intent.getIntExtra("pairID", -1);
                         Location location = intent.getParcelableExtra(Command.LOCATION);
                         pairs.get(pairID).getLocation().setLatitude(location.getLatitude());
                         pairs.get(pairID).getLocation().setLongitude(location.getLongitude());

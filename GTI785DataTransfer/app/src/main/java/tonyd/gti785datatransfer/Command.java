@@ -16,4 +16,5 @@ public final class Command {
 
     public static final String PAIRID = "pairID";
     public static final String FOLDERCONTENT_SUB = "folderContentSub";
+    public static final String DISCONNECTED = "disconnected";
 }

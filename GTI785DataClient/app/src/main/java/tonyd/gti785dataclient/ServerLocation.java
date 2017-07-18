@@ -47,6 +47,8 @@ public class ServerLocation extends NanoHTTPD {
         String[] separated = mySplit(uri, "/");
         String command = separated[0];
         switch (command) {
+            case Command.STATUS:
+                return Response.newFixedLengthResponse("OK");
             case Command.POLL:
                 Gson gson = new Gson();
                 lbq = new LinkedBlockingQueue();
