@@ -15,4 +15,5 @@ public final class Command {
     public static final String PAIR = "pair";
 
     public static final String PAIRID = "pairID";
+    public static final String FOLDERCONTENT_SUB = "folderContentSub";
 }

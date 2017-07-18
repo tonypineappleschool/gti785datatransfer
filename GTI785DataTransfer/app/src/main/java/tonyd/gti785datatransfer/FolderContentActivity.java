@@ -20,7 +20,6 @@ import java.util.ArrayList;
 
 public class FolderContentActivity extends Activity {
 
-    static boolean active = false;
     LinearLayout linearLayout;
     FolderContent folderContent;
     Pair pair;
@@ -28,7 +27,7 @@ public class FolderContentActivity extends Activity {
     String path;
 
     /* For sending requests to the server */
-    private RequestAsyncTask request;
+    private RequestAsyncTaskFolderContent request;
 
     /* For receiving broadcast messages from AsynctaskRequest */
     private BroadcastReceiver receiver;
@@ -52,41 +51,21 @@ public class FolderContentActivity extends Activity {
             public void onReceive(Context context, Intent intent) {
                 String command = intent.getStringExtra(Command.COMMAND);
                 switch (command) {
-                    case Command.FOLDERCONTENT:
-                        if (active) {
-                            // Display files
-                            FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT);
-                            if (path == "") {
-                                path = currentFolder;
-                            } else {
-                                path += "/" + currentFolder;
-                            }
-                            updateLayout(folderContent);
+                    case Command.FOLDERCONTENT_SUB:
+                        // Display files
+                        FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT_SUB);
+                        if (path == "") {
+                            path = currentFolder;
+                        } else {
+                            path += "/" + currentFolder;
                         }
+                        updateLayout(folderContent);
+
                 }
             }
         };
 
     }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        active = true;
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        active = true;
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        active = false;
-    }
-
 
     private void updateLayout(FolderContent folderContent) {
         linearLayout.removeAllViews();
@@ -116,7 +95,6 @@ public class FolderContentActivity extends Activity {
 
                     } else {
                         sendRequest(pairID, pair.getIp(), "4000", Command.FILES, path + "/" + folder.getName());
-
                     }
                 }
             });
@@ -141,7 +119,7 @@ public class FolderContentActivity extends Activity {
     }
 
     private void sendRequest(int pairID, String ipAddress, String port, String command, String param) {
-        request = new RequestAsyncTask(this, pairID, ipAddress, port);
+        request = new RequestAsyncTaskFolderContent(this, pairID, ipAddress, port);
         request.getBroadcaster().registerReceiver(receiver, new IntentFilter(Command.COMMAND));
         request.execute(command, param);
     }

@@ -47,8 +47,6 @@ import static tonyd.gti785datatransfer.Command.COMMAND;
 import static tonyd.gti785datatransfer.Command.POLL;
 
 public class MainActivity extends Activity {
-    static boolean active = false;
-
     private static final int REQUEST_LOCATION = 1;
     private List<Pair> pairs;
     private List<PairUI> pairsUI;
@@ -88,12 +86,11 @@ public class MainActivity extends Activity {
                         }
                         break;
                     case Command.FOLDERCONTENT:
-                        if (active) {
-                            // Display files
-                            pairID = intent.getIntExtra("pairID", -1);
-                            FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT);
-                            startFolderContentActivity(folderContent, pairID);
-                        }
+                        // Display files
+                        pairID = intent.getIntExtra("pairID", -1);
+                        FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT);
+                        startFolderContentActivity(folderContent, pairID);
+
                 }
             }
         };
@@ -134,18 +131,6 @@ public class MainActivity extends Activity {
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
         currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        active = true;
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        active = false;
     }
 
     private void startFolderContentActivity(FolderContent folderContent, int pairID) {
