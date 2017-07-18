@@ -76,6 +76,10 @@ public class MainActivity extends Activity {
                         int pairID = intent.getIntExtra("pairID", -1);
                         pairsUI.get(pairID).getButton().setBackgroundColor(Color.RED);
                         break;
+                    case Command.CONNECTED:
+                        pairID = intent.getIntExtra("pairID", -1);
+                        pairsUI.get(pairID).getButton().setBackgroundColor(Color.CYAN);
+                        break;
                     case Command.LOCATION:
                         pairID = intent.getIntExtra("pairID", -1);
                         Location location = intent.getParcelableExtra(Command.LOCATION);

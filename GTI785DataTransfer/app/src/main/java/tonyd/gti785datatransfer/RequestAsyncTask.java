@@ -62,7 +62,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
             conn.setRequestMethod(method);
             int responseCode = conn.getResponseCode();
             Log.d("RESPONSE CODE", Integer.toString(responseCode));
-
+            setConnected(pairID, true);
             if (responseCode == 200){
                 if (command.equals(Command.POLL)){
                     String responseMessage = conn.getResponseMessage();
@@ -104,6 +104,11 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
         if (!connected){
             Intent intent = new Intent(Command.COMMAND);
             intent.putExtra(Command.COMMAND, Command.DISCONNECTED);
+            intent.putExtra("pairID", pairID);
+            broadcaster.sendBroadcast(intent);
+        } else {
+            Intent intent = new Intent(Command.COMMAND);
+            intent.putExtra(Command.COMMAND, Command.CONNECTED);
             intent.putExtra("pairID", pairID);
             broadcaster.sendBroadcast(intent);
         }
