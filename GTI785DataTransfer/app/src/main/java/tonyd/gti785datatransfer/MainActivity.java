@@ -6,15 +6,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -27,14 +27,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
-import java.io.*;
+import java.lang.reflect.Type;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -43,7 +41,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import static tonyd.gti785datatransfer.Command.COMMAND;
 import static tonyd.gti785datatransfer.Command.POLL;
 
 public class MainActivity extends Activity {
@@ -52,6 +49,11 @@ public class MainActivity extends Activity {
     private List<PairUI> pairsUI;
     private ViewGroup linearLayout;
     private Location currentLocation;
+
+    private SharedPreferences sharedPreferences;
+
+    private SharedPreferences.Editor editor;
+
 
     /* For sending requests to the server */
     private RequestAsyncTask request;
@@ -63,9 +65,24 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        editor = sharedPreferences.edit();
+        Gson gson = new Gson();
+        String json = sharedPreferences.getString(Command.LISTPAIRS, null);
         linearLayout = (ViewGroup) findViewById(R.id.linear_layout_main);
-        pairs = new ArrayList<>();
         pairsUI = new ArrayList<>();
+        if (json == null){
+            pairs = new ArrayList<>();
+        } else {
+            Type type = new TypeToken<ArrayList<Pair>>() {
+            }.getType();
+            pairs = gson.fromJson(json, type);
+            for (Pair p : pairs){
+                addPairUI(p);
+            }
+        }
+
 
         receiver = new BroadcastReceiver() {
             @Override
@@ -163,10 +180,15 @@ public class MainActivity extends Activity {
                     "192.168.43.182",
                     5000,
                     df.parse("09/09/1999"));
-            pairs.add(pair);
-            int pairID = pairs.indexOf(pair);
-            addPair(pair);
-            sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), POLL, "");
+            if (!alreadyExist(pair)) {
+                pairs.add(pair);
+                int pairID = pairs.indexOf(pair);
+                addPairUI(pair);
+                saveToPreferences(Command.LISTPAIRS, pairs);
+                sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), POLL, "");
+
+            }
+
         } catch (ParseException e) {
             e.printStackTrace();
         }
@@ -182,14 +204,27 @@ public class MainActivity extends Activity {
             } else {
                 Toast.makeText(this, "Scanned: " + result.getContents(), Toast.LENGTH_LONG).show();
                 Pair pair = parse(result.getContents());
-                pairs.add(pair);
-                int pairID = pairs.indexOf(pair);
-                addPair(pair);
-                sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), POLL, "");
+                if (!alreadyExist(pair)) {
+                    pairs.add(pair);
+                    int pairID = pairs.indexOf(pair);
+                    addPairUI(pair);
+                    saveToPreferences(Command.LISTPAIRS, pairs);
+                    sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), POLL, "");
+
+                }
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
+    }
+
+    private boolean alreadyExist(Pair pair) {
+        for (Pair p : pairs){
+            if (pair.getId() == p.getId()){
+                return true;
+            }
+        }
+        return false;
     }
 
     public Pair parse(String jsonLine) {
@@ -217,7 +252,7 @@ public class MainActivity extends Activity {
         return pair;
     }
 
-    private void addPair(final Pair pair) {
+    private void addPairUI(final Pair pair) {
         LinearLayout LL = new LinearLayout(this);
         LL.setOrientation(LinearLayout.HORIZONTAL);
         LayoutParams LLParams = new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
@@ -335,5 +370,12 @@ public class MainActivity extends Activity {
                 return;
             }
         }
+    }
+
+    public <T> void saveToPreferences(String key, List<T> list) {
+        Gson gson = new Gson();
+        String json = gson.toJson(list);
+        editor.putString(key, json);
+        editor.commit();
     }
 }

@@ -18,4 +18,7 @@ public final class Command {
     public static final String FOLDERCONTENT_SUB = "folderContentSub";
     public static final String DISCONNECTED = "disconnected";
     public static final String CONNECTED = "connected";
+
+    public static final String LISTPAIRS = "listpairs";
+
 }
