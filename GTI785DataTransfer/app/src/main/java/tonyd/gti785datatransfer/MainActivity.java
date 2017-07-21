@@ -45,6 +45,7 @@ import static tonyd.gti785datatransfer.Command.POLL;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_LOCATION = 1;
+    private static final int REQUEST_WRITE_STORAGE = 2;
     private List<Pair> pairs;
     private List<PairUI> pairsUI;
     private ViewGroup linearLayout;
@@ -80,9 +81,9 @@ public class MainActivity extends Activity {
             pairs = gson.fromJson(json, type);
             for (Pair p : pairs){
                 addPairUI(p);
+                int pairID = pairs.indexOf(p);
             }
         }
-
 
         receiver = new BroadcastReceiver() {
             @Override
@@ -148,13 +149,23 @@ public class MainActivity extends Activity {
 
         // Register the listener with the Location Manager to receive location updates
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // Check Permissions Now
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
                     REQUEST_LOCATION);
         }
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
         currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+        for (Pair p : pairs){
+            int pairID = pairs.indexOf(p);
+            sendRequest(pairID, p.getIp(), Integer.toString(p.getPort()), POLL, "");
+        }
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    REQUEST_WRITE_STORAGE);
+        }
 
     }
 
@@ -357,6 +368,20 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         switch (requestCode) {
             case REQUEST_LOCATION: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // Start the WebService to handle the server in a different thread
+                    Toast.makeText(getApplicationContext(), "Permission Location granted",
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                return;
+            }
+
+            case REQUEST_WRITE_STORAGE: {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {

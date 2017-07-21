@@ -28,6 +28,7 @@ public class FolderContentActivity extends Activity {
 
     /* For sending requests to the server */
     private RequestAsyncTaskFolderContent request;
+    private RequestAsyncTaskFile downloadRequest;
 
     /* For receiving broadcast messages from AsynctaskRequest */
     private BroadcastReceiver receiver;
@@ -64,7 +65,6 @@ public class FolderContentActivity extends Activity {
                 }
             }
         };
-
     }
 
     private void updateLayout(FolderContent folderContent) {
@@ -74,7 +74,7 @@ public class FolderContentActivity extends Activity {
     }
 
     private void displayFolderContent() {
-        ArrayList<Folder> folders = (ArrayList<Folder>) folderContent.getFolders();
+        final ArrayList<Folder> folders = (ArrayList<Folder>) folderContent.getFolders();
         ArrayList<File> files = (ArrayList<File>) folderContent.getFiles();
 
         linearLayout = (LinearLayout) findViewById(R.id.linear_layout_main_folder_content);
@@ -100,7 +100,7 @@ public class FolderContentActivity extends Activity {
             });
             linearLayout.addView(button);
         }
-        for (File file : files){
+        for (final File file : files){
             String name = file.getName();
             Button button = new Button(this);
             button.setText(name);
@@ -111,7 +111,12 @@ public class FolderContentActivity extends Activity {
             button.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    if (path == ""){
+                        sendDownloadRequest(pairID, pair.getIp(), "4000", Command.FILES, file.getName());
 
+                    } else {
+                        sendDownloadRequest(pairID, pair.getIp(), "4000", Command.FILES, path + "/" + file.getName());
+                    }
                 }
             });
             linearLayout.addView(button);
@@ -122,5 +127,11 @@ public class FolderContentActivity extends Activity {
         request = new RequestAsyncTaskFolderContent(this, pairID, ipAddress, port);
         request.getBroadcaster().registerReceiver(receiver, new IntentFilter(Command.COMMAND));
         request.execute(command, param);
+    }
+
+    private void sendDownloadRequest(int pairID, String ipAddress, String port, String command, String param) {
+        downloadRequest = new RequestAsyncTaskFile(this, pairID, ipAddress, port);
+        downloadRequest.getBroadcaster().registerReceiver(receiver, new IntentFilter(Command.COMMAND));
+        downloadRequest.execute(command, param);
     }
 }

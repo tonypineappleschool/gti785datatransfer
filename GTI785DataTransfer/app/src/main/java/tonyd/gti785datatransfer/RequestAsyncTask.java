@@ -1,5 +1,6 @@
 package tonyd.gti785datatransfer;
 
+import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
@@ -97,6 +98,12 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
         }
 
         return null;
+
+    }
+
+    private void downloadFile() {
+        DownloadManager downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
+
 
     }
 

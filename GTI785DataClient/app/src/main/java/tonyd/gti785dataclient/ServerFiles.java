@@ -3,6 +3,7 @@ package tonyd.gti785dataclient;
 import android.content.Context;
 import android.os.Environment;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import com.google.gson.Gson;
 
@@ -54,12 +55,15 @@ public class ServerFiles extends NanoHTTPD {
                 File pathFile = new File(finalPath);
                 if (pathFile.isFile()){
                     FileInputStream fis = null;
+                    String extension = MimeTypeMap.getFileExtensionFromUrl(uri);
+                    String type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
                     try {
                         fis = new FileInputStream(pathFile);
+                        return Response.newFixedLengthResponse(Status.OK, "application/octet-stream",fis, (int)pathFile.length());
+
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
-                    return Response.newChunkedResponse(Status.OK, "application/octet-stream",fis);
                 } else if (pathFile.isDirectory()){
                     File[] filesFolders = pathFile.listFiles();
                     ArrayList<Folder> folders = new ArrayList<>();
