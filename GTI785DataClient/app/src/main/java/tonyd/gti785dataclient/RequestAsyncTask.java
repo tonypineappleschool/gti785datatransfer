@@ -1,4 +1,4 @@
-package tonyd.gti785datatransfer;
+package tonyd.gti785dataclient;
 
 import android.app.DownloadManager;
 import android.content.Context;

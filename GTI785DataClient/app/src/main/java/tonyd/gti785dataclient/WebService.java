@@ -53,9 +53,10 @@ public class WebService extends Service {
             public void onLocationChanged(Location location) {
                 // if (deviceLocation != null /* || deviceLocation.distanceTo(location) > 5.0f */) {
                     deviceLocation = location;
+                    Pair.Location customLocation = new Pair.Location(location.getLongitude(), location.getLatitude());
                     if (serverLocation.getLbq() != null) {
                         try {
-                            serverLocation.getLbq().put(deviceLocation);
+                            serverLocation.getLbq().put(customLocation);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }

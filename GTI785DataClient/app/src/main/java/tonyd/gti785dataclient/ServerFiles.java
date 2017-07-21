@@ -59,7 +59,7 @@ public class ServerFiles extends NanoHTTPD {
                     String type = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
                     try {
                         fis = new FileInputStream(pathFile);
-                        return Response.newFixedLengthResponse(Status.OK, "application/octet-stream",fis, (int)pathFile.length());
+                        return Response.newFixedLengthResponse(Status.OK, type, fis, (int)pathFile.length());
 
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();

@@ -1,12 +1,15 @@
 package tonyd.gti785dataclient;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.util.Date;
 
 /**
  * Created by stefaniekoy on 2017-06-28.
  */
 
-public class Folder {
+public class Folder implements Parcelable{
 
     private String name;
     private Date date;
@@ -40,4 +43,29 @@ public class Folder {
                 '}';
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(name);
+        dest.writeLong(date.getTime());
+    }
+
+    public static final Parcelable.Creator CREATOR = new Parcelable.Creator() {
+        public Folder createFromParcel(Parcel in) {
+            return new Folder(in);
+        }
+
+        public Folder[] newArray(int size) {
+            return new Folder[size];
+        }
+    };
+
+    protected Folder(Parcel in){
+        name = in.readString();
+        date = new Date(in.readLong());
+    }
 }

@@ -41,8 +41,6 @@ public class ServerLocation extends NanoHTTPD {
 
     @Override
     public Response serve(IHTTPSession session) {
-
-
         String uri = session.getUri();
         String[] separated = mySplit(uri, "/");
         String command = separated[0];

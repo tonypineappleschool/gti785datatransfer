@@ -1,12 +1,19 @@
 package tonyd.gti785dataclient;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
+import java.util.ArrayList;
 import java.util.List;
+
+import tonyd.gti785dataclient.File;
+import tonyd.gti785dataclient.Folder;
 
 /**
  * Created by stefaniekoy on 2017-06-28.
  */
 
-public class FolderContent {
+public class FolderContent implements Parcelable {
 
     private List<Folder> folders;
     private List<File> files;
@@ -40,4 +47,31 @@ public class FolderContent {
                 '}';
     }
 
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeTypedList(folders);
+        dest.writeTypedList(files);
+    }
+
+    public static final Parcelable.Creator CREATOR = new Parcelable.Creator() {
+        public FolderContent createFromParcel(Parcel in) {
+            return new FolderContent(in);
+        }
+
+        public FolderContent[] newArray(int size) {
+            return new FolderContent[size];
+        }
+    };
+
+    private FolderContent(Parcel in) {
+        folders = new ArrayList<>();
+        files = new ArrayList<>();
+        in.readTypedList(folders, Folder.CREATOR);
+        in.readTypedList(files, File.CREATOR);
+    }
 }

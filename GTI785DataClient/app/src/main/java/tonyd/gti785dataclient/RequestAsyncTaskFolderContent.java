@@ -1,6 +1,5 @@
-package tonyd.gti785datatransfer;
+package tonyd.gti785dataclient;
 
-import android.app.DownloadManager;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
@@ -22,7 +21,7 @@ import java.net.URL;
  * Created by tonyd on 5/28/2017.
  */
 
-public class RequestAsyncTask extends AsyncTask<String, Void, String> {
+public class RequestAsyncTaskFolderContent extends AsyncTask<String, Void, String> {
 
     private String baseUrl;
     private String ipAddress;
@@ -37,7 +36,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
     private LocalBroadcastManager broadcaster;
     private Context context;
 
-    public RequestAsyncTask(Context context, int pairID, String ipAddress, String port) {
+    public RequestAsyncTaskFolderContent(Context context, int pairID, String ipAddress, String port) {
         this.context = context;
         broadcaster = LocalBroadcastManager.getInstance(context);
         this.pairID = pairID;
@@ -63,7 +62,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
             conn.setRequestMethod(method);
             int responseCode = conn.getResponseCode();
             Log.d("RESPONSE CODE", Integer.toString(responseCode));
-            setConnected(pairID, true);
+
             if (responseCode == 200){
                 if (command.equals(Command.POLL)){
                     String responseMessage = conn.getResponseMessage();
@@ -93,39 +92,17 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
-            setConnected(pairID, false);
-
         }
 
         return null;
 
     }
 
-    private void downloadFile() {
-        DownloadManager downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-
-
-    }
-
-    private void setConnected(int pairID, boolean connected) {
-        if (!connected){
-            Intent intent = new Intent(Command.COMMAND);
-            intent.putExtra(Command.COMMAND, Command.DISCONNECTED);
-            intent.putExtra("pairID", pairID);
-            broadcaster.sendBroadcast(intent);
-        } else {
-            Intent intent = new Intent(Command.COMMAND);
-            intent.putExtra(Command.COMMAND, Command.CONNECTED);
-            intent.putExtra("pairID", pairID);
-            broadcaster.sendBroadcast(intent);
-        }
-    }
-
     private void updateView(FolderContent folderContent, int pairID) {
         Intent intent = new Intent(Command.COMMAND);
-        intent.putExtra(Command.COMMAND, Command.FOLDERCONTENT);
-        intent.putExtra("folderContent", folderContent);
-        intent.putExtra("pairID", pairID);
+        intent.putExtra(Command.COMMAND, Command.FOLDERCONTENT_SUB);
+        intent.putExtra(Command.FOLDERCONTENT_SUB, folderContent);
+        intent.putExtra(Command.PAIRID, pairID);
         broadcaster.sendBroadcast(intent);
     }
 
@@ -154,7 +131,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
 
     private void sendRequest() {
         if (command == Command.POLL)
-            new RequestAsyncTask(context, pairID, ipAddress, port).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, Command.POLL, "");
+            new RequestAsyncTaskFolderContent(context, pairID, ipAddress, port).execute(Command.POLL, "");
     }
 
 }

@@ -13,6 +13,7 @@ android {
         jackOptions {
             enabled true
         }
+        vectorDrawables.useSupportLibrary = true;
     }
     buildTypes {
         release {
@@ -32,6 +33,7 @@ android {
 }
 
 dependencies {
+    compile 'com.journeyapps:zxing-android-embedded:3.5.0'
     compile 'com.google.zxing:core:3.2.1'
     compile 'com.google.code.gson:gson:2.6.2'
     compile fileTree(dir: 'libs', include: ['*.jar'])
@@ -45,4 +47,5 @@ dependencies {
 
 
 
+    compile 'com.android.support:recyclerview-v7:25.3.1'
 }

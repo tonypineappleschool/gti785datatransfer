@@ -1,4 +1,14 @@
 <resources>
-    <string name="app_name">GTI785DataClient</string>
+    <string name="app_name">EasyShare</string>
     <string name="generate">Generate QR Code</string>
+    <string name="capture">Capture</string>
+    <string name="register">Register</string>
+    <string name="registered_devices">Registered Devices</string>
+    <string name="sortByName">Sort (Name)</string>
+    <string name="sortByDistance">Sort (Distance)</string>
+    <string name="sortName">By Name</string>
+    <string name="sortDistance">By Distance</string>
+    <string name="sortLastAccessed">By Date</string>
+    <string name="files">Files</string>
+    <string name="folders">Folders</string>
 </resources>

@@ -1,6 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@+id/generate"
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/generate"
+        android:icon="@drawable/qr_code"
+        android:showAsAction="ifRoom"
         android:title="@string/generate"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/register"
+        android:icon="@drawable/scan"
+        android:showAsAction="ifRoom"
+        android:title="@string/register" />
+    <item
+        android:id="@+id/sortByName"
+        android:icon="@drawable/sort"
+        android:showAsAction="ifRoom"
+        android:title="@string/sortByName">
+        <menu>
+            <item
+                android:id="@+id/action_sortName"
+                android:title="@string/sortName" />
+            <item
+                android:id="@+id/action_sortDistance"
+                android:title="@string/sortDistance" />
+            <item
+                android:id="@+id/action_sortLastAccessed"
+                android:title="@string/sortLastAccessed" />
+        </menu>
+    </item>
+    <item android:id="@+id/sortByDistance"
+        android:title="@string/sortByDistance"
         android:showAsAction="ifRoom"/>
 </menu>

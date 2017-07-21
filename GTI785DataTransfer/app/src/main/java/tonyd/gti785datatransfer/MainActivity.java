@@ -12,6 +12,7 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
@@ -188,7 +189,7 @@ public class MainActivity extends Activity {
         try {
             Pair pair = new Pair(123456,
                     "tony",
-                    "192.168.43.182",
+                    "172.20.10.6",
                     5000,
                     df.parse("09/09/1999"));
             if (!alreadyExist(pair)) {
@@ -361,7 +362,7 @@ public class MainActivity extends Activity {
     private void sendRequest(int pairID, String ipAddress, String port, String command, String param) {
         request = new RequestAsyncTask(this, pairID, ipAddress, port);
         request.getBroadcaster().registerReceiver(receiver, new IntentFilter(Command.COMMAND));
-        request.execute(command, param);
+        request.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, command, param);
     }
 
     @Override
