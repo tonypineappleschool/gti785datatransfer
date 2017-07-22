@@ -12,4 +12,5 @@
     <string name="folders">Folders</string>
     <string name="add">Add pair</string>
     <string name="updates">Updates</string>
+    <string name="nfc">Share pairs</string>
 </resources>

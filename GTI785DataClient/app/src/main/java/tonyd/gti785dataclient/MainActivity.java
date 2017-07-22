@@ -16,6 +16,10 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.wifi.WifiManager;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.NfcAdapter;
+import android.nfc.NfcEvent;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
@@ -52,6 +56,7 @@ import com.google.zxing.integration.android.IntentResult;
 
 import java.io.File;
 import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -65,7 +70,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class MainActivity extends AppCompatActivity implements WebServiceCallbacks {
+public class MainActivity extends AppCompatActivity implements WebServiceCallbacks, NfcAdapter.CreateNdefMessageCallback {
 
     private static final int REQUEST_WRITE_STORAGE = 2;
     private static final int SORTNAME = 100;
@@ -78,7 +83,6 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
     private HashMap<Pair, ArrayList<FileSync>> fileSyncHashMap;
 
     private SharedPreferences sharedPreferences;
-
     private SharedPreferences.Editor editor;
 
     /* For sending requests to the server */
@@ -86,6 +90,9 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
 
     /* For receiving broadcast messages from AsynctaskRequest */
     private BroadcastReceiver receiver;
+
+    private NfcAdapter mNfcAdapter;
+
 
     private static final int REQUEST_LOCATION = 1;
     private static final int REQUEST_READ_EXTERNAL_STORAGE = 2;
@@ -157,6 +164,15 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             deviceLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         }
+
+        mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        if (mNfcAdapter == null) {
+            Toast.makeText(this, "NFC is not available", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+        // Register callback
+        mNfcAdapter.setNdefPushMessageCallback(this, this);
 
 
     }
@@ -264,6 +280,31 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
         super.onDestroy();
         Intent intent = new Intent(this, WebService.class);
         stopService(intent);
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Check to see that the Activity started due to an Android Beam
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
+            processIntent(getIntent());
+        }
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+        // onResume gets called after this to handle the intent
+        setIntent(intent);
+    }
+
+    private void processIntent(Intent intent) {
+        ArrayList<Pair> pairs = intent.getParcelableArrayListExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+        for (Pair p : pairs){
+            if (!this.pairs.contains(p)){
+                this.pairs.add(p);
+            }
+        }
+        pairsAdapter.notifyDataSetChanged();
     }
 
     private void displayQRCode(String jsonString) {
@@ -657,6 +698,21 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
         pairs.remove(pair);
         pairsAdapter.notifyDataSetChanged();
         saveToPreferences(Command.LISTPAIRS, pairs);
+    }
+
+    @Override
+    public NdefMessage createNdefMessage(NfcEvent event) {
+        Gson gson = new Gson();
+        String serializedPairs = gson.toJson(pairs);
+        NdefRecord mimeRecord = new NdefRecord(
+                NdefRecord.TNF_MIME_MEDIA ,
+                "application/net.etsmtl.nfc.sharefiles.pairs".getBytes(Charset.forName("US-ASCII")),
+                new byte[0], serializedPairs.getBytes(Charset.forName("US-ASCII")));
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            NdefMessage message = new NdefMessage(mimeRecord);
+            return message;
+        }
+        return null;
     }
 
     class PairNameComparator implements Comparator<Pair>{

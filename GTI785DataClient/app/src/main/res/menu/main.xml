@@ -26,6 +26,12 @@
         android:title="@string/updates"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/nfc"
+        android:icon="@drawable/nfc"
+        android:showAsAction="ifRoom"
+        android:title="@string/nfc"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/sortByName"
         android:icon="@drawable/sort"
         android:showAsAction="ifRoom"
