@@ -195,7 +195,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                         pairID = intent.getIntExtra("pairID", -1);
                         pair = findPairById(pairID);
                         if (pair != null) {
-                            Location location = intent.getParcelableExtra(Command.LOCATION);
+                            Pair.Location location = intent.getParcelableExtra(Command.LOCATION);
                             pair.getLocation().setLatitude(location.getLatitude());
                             pair.getLocation().setLongitude(location.getLongitude());
                             pairsAdapter.notifyDataSetChanged();

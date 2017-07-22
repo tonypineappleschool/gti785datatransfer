@@ -64,6 +64,7 @@ public class WebService extends Service {
         locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
                     deviceLocation = location;
+                    Toast.makeText(getApplicationContext(), "Location Web Service Updated", Toast.LENGTH_LONG).show();
                     Pair.Location customLocation = new Pair.Location(location.getLongitude(), location.getLatitude());
                     if (serverLocation.getLbq() != null) {
                         try {

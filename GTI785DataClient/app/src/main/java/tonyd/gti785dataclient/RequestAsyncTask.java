@@ -72,7 +72,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
                     BufferedReader in = new BufferedReader(
                             new InputStreamReader(conn.getInputStream()));
                     Gson gson = new Gson();
-                    Location location = gson.fromJson(in, Location.class);
+                    Pair.Location location = gson.fromJson(in, Pair.Location.class);
                     updateLocation(location, pairID);
                 }
                 else if (command.equals(Command.FILES)) {
@@ -136,7 +136,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
         return new URL(url, relURL);
     }
 
-    private void updateLocation(Location location, int pairID) {
+    private void updateLocation(Pair.Location location, int pairID) {
         Intent intent = new Intent(Command.COMMAND);
         intent.putExtra(Command.COMMAND, Command.LOCATION);
         intent.putExtra("location", location);

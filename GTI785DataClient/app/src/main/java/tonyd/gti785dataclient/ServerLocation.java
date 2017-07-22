@@ -53,7 +53,7 @@ public class ServerLocation extends NanoHTTPD {
                 Object o = null;
                 try {
                     // wait for 60 s for there to be an object in the queue
-                    o = lbq.poll(5, TimeUnit.SECONDS);
+                    o = lbq.poll(60, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
