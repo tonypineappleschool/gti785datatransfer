@@ -708,11 +708,9 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                 NdefRecord.TNF_MIME_MEDIA ,
                 "application/net.etsmtl.nfc.sharefiles.pairs".getBytes(Charset.forName("US-ASCII")),
                 new byte[0], serializedPairs.getBytes(Charset.forName("US-ASCII")));
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-            NdefMessage message = new NdefMessage(mimeRecord);
-            return message;
-        }
-        return null;
+        NdefMessage message = new NdefMessage(mimeRecord);
+        return message;
+
     }
 
     class PairNameComparator implements Comparator<Pair>{
