@@ -203,7 +203,8 @@ public class FolderContentActivity extends Activity {
     public void onBackPressed() {
         // save data first
         if (path == ""){
-
+            Intent intent = new Intent(this, MainActivity.class);
+            startActivity(intent);
         } else {
             int lastIndex = path.lastIndexOf("/");
             if (lastIndex == -1){

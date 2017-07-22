@@ -17,6 +17,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.util.Random;
 
 /**
  * Created by tonyd on 5/28/2017.
@@ -58,14 +59,14 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
             URL url = URLbuilt(params);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setReadTimeout(60 * 1000);
-            conn.setConnectTimeout(5000);
+            conn.setConnectTimeout(10000);
             String method = "GET";
             conn.setRequestMethod(method);
             int responseCode = conn.getResponseCode();
             Log.d("RESPONSE CODE", Integer.toString(responseCode));
             setConnected(pairID, true);
             if (responseCode == 200){
-                if (command.equals(Command.POLL)){
+                if (command.equals(Command.POLL)) {
                     String responseMessage = conn.getResponseMessage();
 
                     BufferedReader in = new BufferedReader(
@@ -73,7 +74,8 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
                     Gson gson = new Gson();
                     Location location = gson.fromJson(in, Location.class);
                     updateLocation(location, pairID);
-                } else if (command.equals(Command.FILES)) {
+                }
+                else if (command.equals(Command.FILES)) {
                     String contentType = conn.getContentType();
                     if (contentType.equals("application/octet-stream")) {
                         // it is a file
@@ -100,18 +102,12 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
         return null;
 
     }
-
-    private void downloadFile() {
-        DownloadManager downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-
-
-    }
-
     private void setConnected(int pairID, boolean connected) {
         if (!connected){
             Intent intent = new Intent(Command.COMMAND);
             intent.putExtra(Command.COMMAND, Command.DISCONNECTED);
             intent.putExtra("pairID", pairID);
+            intent.putExtra("notificationID", getSaltString());
             broadcaster.sendBroadcast(intent);
         } else {
             Intent intent = new Intent(Command.COMMAND);
@@ -126,6 +122,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
         intent.putExtra(Command.COMMAND, Command.FOLDERCONTENT);
         intent.putExtra("folderContent", folderContent);
         intent.putExtra("pairID", pairID);
+        intent.putExtra("notificationID", getSaltString());
         broadcaster.sendBroadcast(intent);
     }
 
@@ -144,18 +141,26 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
         intent.putExtra(Command.COMMAND, Command.LOCATION);
         intent.putExtra("location", location);
         intent.putExtra("pairID", pairID);
+        intent.putExtra("notificationID", getSaltString());
+
         broadcaster.sendBroadcast(intent);
     }
 
     @Override
     protected void onPostExecute(String result) {
-        sendRequest();
     }
 
-    private void sendRequest() {
-        if (command == Command.POLL)
-            new RequestAsyncTask(context, pairID, ipAddress, port).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, Command.POLL, "");
-    }
+    protected String getSaltString() {
+        String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        StringBuilder salt = new StringBuilder();
+        Random rnd = new Random();
+        while (salt.length() < 18) { // length of the random string.
+            int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+            salt.append(SALTCHARS.charAt(index));
+        }
+        String saltStr = salt.toString();
+        return saltStr;
 
+    }
 }
 

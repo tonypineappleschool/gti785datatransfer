@@ -71,7 +71,7 @@ public class FoldersAdapter extends RecyclerView.Adapter<FoldersAdapter.ViewHold
         TextView textView = viewHolder.nameTextView;
         textView.setText(contact.getName());
         Button button = viewHolder.statusButton;
-        button.setText("");
+        button.setText("BROWSE");
         folderContentActivity.updateListeners();
     }
 

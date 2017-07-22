@@ -68,7 +68,7 @@ public class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.ViewHolder> 
         TextView textView = viewHolder.nameTextView;
         textView.setText(contact.getName());
         Button button = viewHolder.statusButton;
-        button.setText("");
+        button.setText("DOWNLOAD");
         folderContentActivity.updateListeners();
     }
 

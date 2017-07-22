@@ -26,6 +26,7 @@ public class Pair implements Parcelable {
         this.port = port;
         this.lastAccessed = lastAccessed;
         this.location = new Location(0.0, 0.0);
+        this.status = false;
     }
 
     protected Pair(Parcel in) {

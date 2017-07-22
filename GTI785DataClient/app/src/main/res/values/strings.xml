@@ -4,11 +4,11 @@
     <string name="capture">Capture</string>
     <string name="register">Register</string>
     <string name="registered_devices">Registered Devices</string>
-    <string name="sortByName">Sort (Name)</string>
-    <string name="sortByDistance">Sort (Distance)</string>
-    <string name="sortName">By Name</string>
-    <string name="sortDistance">By Distance</string>
-    <string name="sortLastAccessed">By Date</string>
+    <string name="sortByName">Sort</string>
+    <string name="sortName">Name</string>
+    <string name="sortDistance">Distance</string>
+    <string name="sortLastAccessed">Date</string>
     <string name="files">Files</string>
     <string name="folders">Folders</string>
+    <string name="add">Add pair</string>
 </resources>

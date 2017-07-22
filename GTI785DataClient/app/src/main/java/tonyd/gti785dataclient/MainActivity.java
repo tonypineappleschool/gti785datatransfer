@@ -19,6 +19,7 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
@@ -55,16 +56,22 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements WebServiceCallbacks {
 
     private static final int REQUEST_WRITE_STORAGE = 2;
+    private static final int SORTNAME = 100;
+    private static final int SORTDIST = 101;
+    private static final int SORTDATE = 102;
     private List<Pair> pairs;
     private ViewGroup linearLayout;
-    private Location currentLocation;
     private PairsAdapter pairsAdapter;
+    protected Location deviceLocation;
 
     private SharedPreferences sharedPreferences;
 
@@ -84,33 +91,16 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
 
     /* Web Service */
     private WebService webService;
-    private boolean bound;
-    private ServiceConnection mServiceConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            bound = false;
-        }
-
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            WebService.MyBinder myBinder = (WebService.MyBinder) service;
-            webService = myBinder.getService();
-            bound = true;
-            webService.setCallbacks(MainActivity.this); // register
-            Toast.makeText(MainActivity.this, "Connected to WebService", Toast.LENGTH_SHORT).show();
-        }
-    };
     public static int WHITE = 0xFFFFFFFF;
     public static int BLACK = 0xFF000000;
+    private HashSet<String> mySet;
+    private RequestAsyncTaskFolderContent folderRequest;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        RecyclerView rvPairs = (RecyclerView) findViewById(R.id.rvPairs);
 
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         editor = sharedPreferences.edit();
@@ -125,62 +115,16 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
             pairs = gson.fromJson(json, type);
         }
         pairsAdapter = new PairsAdapter(this, pairs);
-        rvPairs.setAdapter(pairsAdapter);
-        rvPairs.setLayoutManager(new LinearLayoutManager(this));
-        rvPairs.postDelayed(() -> {
-            for (int i = 0 ; i < pairsAdapter.getItemCount() ; i++){
-                PairsAdapter.ViewHolder vh = (PairsAdapter.ViewHolder) rvPairs.findViewHolderForAdapterPosition(i);
-                if (vh != null){
-                    Pair pair = pairs.get(i);
-                    vh.statusButton.setOnClickListener(v -> {
-                        int pairID = pairs.indexOf(pair);
-                        sendRequest(pairID, pair.getIp(), "4000", Command.FILES, "");
-                    });
-                }
-            }
-        },50);
-
-        receiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                String command = intent.getStringExtra(Command.COMMAND);
-                switch (command) {
-                    case Command.DISCONNECTED:
-                        int pairID = intent.getIntExtra("pairID", -1);
-                        break;
-                    case Command.CONNECTED:
-                        pairID = intent.getIntExtra("pairID", -1);
-                        break;
-                    case Command.LOCATION:
-                        pairID = intent.getIntExtra("pairID", -1);
-                        Location location = intent.getParcelableExtra(Command.LOCATION);
-                        pairs.get(pairID).getLocation().setLatitude(location.getLatitude());
-                        pairs.get(pairID).getLocation().setLongitude(location.getLongitude());
-                        // Update UI
-                        if (currentLocation != null) {
-                            float distance[] =  new float[1];
-                            Location.distanceBetween(currentLocation.getLatitude(), currentLocation.getLongitude(),
-                                    location.getLatitude(), location.getLongitude(), distance);
-                        }
-                        break;
-                    case Command.FOLDERCONTENT:
-                        // Display files
-                        pairID = intent.getIntExtra("pairID", -1);
-                        FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT);
-                        startFolderContentActivity(folderContent, pairID);
-
-                }
-            }
-        };
+        pairsAdapter.setActivity(this);
 
         // Acquire a reference to the system Location Manager
         LocationManager locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
-
         // Define a listener that responds to location updates
         LocationListener locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
                 // Called when a new location is found by the network location provider.
-                currentLocation = location;
+                deviceLocation = location;
+                Toast.makeText(getApplicationContext(), "Location Updated", Toast.LENGTH_LONG).show();
             }
 
             public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -200,18 +144,116 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                     REQUEST_LOCATION);
         }
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
-        currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 0, locationListener);
+        deviceLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
-        for (Pair p : pairs){
-            int pairID = pairs.indexOf(p);
-            sendRequest(pairID, p.getIp(), Integer.toString(p.getPort()), Command.POLL, "");
-        }
         checkAllPermissions();
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            Location deviceLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+            deviceLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         }
 
+    }
+
+    @Override
+    public void onStart(){
+        super.onStart();
+        mySet = new HashSet<>();
+        receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String id = intent.getStringExtra("notificationID");
+                if (mySet.contains(id))
+                    return;
+                mySet.add(id);
+                String command = intent.getStringExtra(Command.COMMAND);
+                switch (command) {
+                    case Command.DISCONNECTED:
+                        int pairID = intent.getIntExtra("pairID", -1);
+                        Pair pair = findPairById(pairID);
+                        if (pair != null) {
+                            pair.setStatus(false);
+                            pairsAdapter.notifyDataSetChanged();
+                            Handler handler = new Handler();
+                            handler.postDelayed(new Runnable() {
+                                public void run() {
+                                    sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
+                                }
+                            }, 2000);
+
+                        }
+                        break;
+                    case Command.CONNECTED:
+                        pairID = intent.getIntExtra("pairID", -1);
+                        pair = findPairById(pairID);
+                        if (pair != null) {
+                            pair.setStatus(true);
+                            pairsAdapter.notifyDataSetChanged();
+                        }
+                        break;
+                    case Command.LOCATION:
+                        pairID = intent.getIntExtra("pairID", -1);
+                        pair = findPairById(pairID);
+                        if (pair != null) {
+                            Location location = intent.getParcelableExtra(Command.LOCATION);
+                            pair.getLocation().setLatitude(location.getLatitude());
+                            pair.getLocation().setLongitude(location.getLongitude());
+                            pairsAdapter.notifyDataSetChanged();
+                            Handler handler = new Handler();
+                            handler.postDelayed(new Runnable() {
+                                public void run() {
+                                    sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
+                                }
+                            }, 2000);
+                        }
+                        break;
+                    case Command.FOLDERCONTENT:
+                        // Display files
+                        pairID = intent.getIntExtra("pairID", -1);
+                        pair = findPairById(pairID);
+                        if (pair != null) {
+                            FolderContent folderContent = intent.getParcelableExtra(Command.FOLDERCONTENT);
+                            findPairById(pairID).setLastAccessed(new Date());
+                            startFolderContentActivity(folderContent, pairID);
+                        }
+                }
+            }
+        };
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            public void run() {
+                Intent intent = new Intent(getApplicationContext(), WebService.class);
+                startService(intent);
+            }
+        }, 2000);
+
+        RecyclerView rvPairs = (RecyclerView) findViewById(R.id.rvPairs);
+        rvPairs.setAdapter(pairsAdapter);
+        rvPairs.setLayoutManager(new LinearLayoutManager(this));
+        rvPairs.postDelayed(() -> {
+            for (int i = 0 ; i < pairsAdapter.getItemCount() ; i++){
+                PairsAdapter.ViewHolder vh = (PairsAdapter.ViewHolder) rvPairs.findViewHolderForAdapterPosition(i);
+                if (vh != null){
+                    Pair pair = pairs.get(i);
+                    vh.statusButton.setOnClickListener(v -> {
+                        int pairID = pair.getId();
+                        sendRequest(pairID, pair.getIp(), "4000", Command.FILES, "");
+                    });
+                }
+            }
+        },2000);
+        for (Pair p : pairs){
+            int pairID = p.getId();
+            sendRequest(pairID, p.getIp(), Integer.toString(p.getPort()), Command.POLL, "");
+        }
+
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        Intent intent = new Intent(this, WebService.class);
+        stopService(intent);
     }
 
     private void displayQRCode(String jsonString) {
@@ -251,13 +293,82 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
             case R.id.register:
                 capture();
                 return true;
-            case R.id.sortByName:
+            case R.id.action_sortName:
+                sort(SORTNAME);
                 return true;
-            case R.id.sortByDistance:
+            case R.id.action_sortDistance:
+                sort(SORTDIST);
+                return true;
+            case R.id.action_sortLastAccessed:
+                sort(SORTDATE);
+                return true;
+            case R.id.add:
+                addManually();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void addManually() {
+        // custom dialog
+        final Dialog dialog = new Dialog(this);
+        dialog.setContentView(R.layout.dialog_layout);
+        dialog.setTitle("ADD A PAIR MANUALLY");
+
+        final EditText id_edit_text = (EditText) dialog.findViewById(R.id.id_edit_text);
+        final EditText name_edit_text = (EditText) dialog.findViewById(R.id.name_edit_text);
+        final EditText ip_edit_text = (EditText) dialog.findViewById(R.id.ip_edit_text);
+        final EditText port_edit_text = (EditText) dialog.findViewById(R.id.port_edit_text);
+
+        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        ipAddress = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
+        port = "5000";
+
+        id_edit_text.setText("1");
+        name_edit_text.setText(getDeviceName());
+
+        ip_edit_text.setText(ipAddress);
+        port_edit_text.setText(port);
+        Button dialogButton = (Button) dialog.findViewById(R.id.ok_generate_button);
+        dialogButton.setOnClickListener(v -> {
+            String jsonString = jsonString(
+                    id_edit_text.getText().toString(),
+                    name_edit_text.getText().toString(),
+                    ip_edit_text.getText().toString(),
+                    port_edit_text.getText().toString()
+            );
+            Pair pair = parse(jsonString);
+            if (!alreadyExist(pair)) {
+                pairs.add(pair);
+                int pairID = pair.getId();
+                // Notify the adapter that an item was inserted at position 0
+                pairsAdapter.notifyDataSetChanged();
+                saveToPreferences(Command.LISTPAIRS, pairs);
+                sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
+            }
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
+    private void sort(int comparator) {
+        switch (comparator) {
+            case SORTNAME:
+                PairNameComparator comparatorName = new PairNameComparator();
+                Collections.sort(pairs, comparatorName);
+                break;
+            case SORTDIST:
+                PairDistanceComparator comparatorDistance = new PairDistanceComparator();
+                Collections.sort(pairs, comparatorDistance);
+                break;
+            case SORTDATE:
+                PairLastAccessedComparator comparatorDate = new PairLastAccessedComparator();
+                Collections.sort(pairs, comparatorDate);
+                break;
+        }
+        pairsAdapter.notifyDataSetChanged();
     }
 
     private void displayDialogQRCode() {
@@ -303,10 +414,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     // Start the WebService to handle the server in a different thread
-                    Intent intent = new Intent(this, WebService.class);
-                    boolean result = bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
-                    Toast.makeText(getApplicationContext(), Boolean.toString(result),
-                            Toast.LENGTH_SHORT).show();
+
                 } else {
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
@@ -344,39 +452,24 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
     private void startFolderContentActivity(FolderContent folderContent, int pairID) {
         Intent intentActivity = new Intent(this, FolderContentActivity.class);
         intentActivity.putExtra(Command.FOLDERCONTENT, folderContent);
-        intentActivity.putExtra(Command.PAIR, pairs.get(pairID));
+        intentActivity.putExtra(Command.PAIR, findPairById(pairID));
         intentActivity.putExtra(Command.PAIRID, pairID);
         startActivity(intentActivity);
+    }
+
+    private Pair findPairById(int pairID) {
+        for (Pair p : pairs){
+            if (p.getId() == pairID){
+                return p;
+            }
+        }
+        return null;
     }
 
     private void capture() {
         IntentIntegrator integrator = new IntentIntegrator(this);
         integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE_TYPES);
         integrator.initiateScan();
-
-//        // TEMP
-//        DateFormat df = new SimpleDateFormat("mm/dd/yyyy");
-//        Date lastAccessedDate = new Date();
-//        try {
-//            Pair pair = new Pair(123456,
-//                    "tony",
-//                    "172.20.10.6",
-//                    5000,
-//                    df.parse("09/09/1999"));
-//            if (!alreadyExist(pair)) {
-//                pairs.add(pair);
-//                int pairID = pairs.indexOf(pair);
-//                // Notify the adapter that an item was inserted at position 0
-//                pairsAdapter.notifyItemInserted(0);
-//                saveToPreferences(Command.LISTPAIRS, pairs);
-//                sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
-//
-//            }
-//
-//        } catch (ParseException e) {
-//            e.printStackTrace();
-//        }
-
     }
 
     @Override
@@ -390,9 +483,9 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                 Pair pair = parse(result.getContents());
                 if (!alreadyExist(pair)) {
                     pairs.add(pair);
-                    int pairID = pairs.indexOf(pair);
+                    int pairID = pair.getId();
                     // Notify the adapter that an item was inserted at position 0
-                    pairsAdapter.notifyItemInserted(0);
+                    pairsAdapter.notifyDataSetChanged();
                     saveToPreferences(Command.LISTPAIRS, pairs);
                     sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
                 }
@@ -430,16 +523,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
         String name = jsonObject.get("name").getAsString();
         String ip = jsonObject.get("ip").getAsString();
         int port = jsonObject.get("port").getAsInt();
-        String lastAccessed = jsonObject.get("lastAccessed").getAsString();
-        String location = jsonObject.get("location").getAsString();
-
-        DateFormat df = new SimpleDateFormat("mm/dd/yyyy");
         Date lastAccessedDate = new Date();
-        try {
-            lastAccessedDate = df.parse(lastAccessed);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
 
         Pair pair = new Pair(id,
                 name,
@@ -500,9 +584,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
         } else {
             // Start the WebService to handle the server in a different thread
             Intent intent = new Intent(this, WebService.class);
-            boolean result = bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE);
-            Toast.makeText(getApplicationContext(), Boolean.toString(result),
-                    Toast.LENGTH_SHORT).show();
+            startService(intent);
         }
 
         if (permissionReadExternalStorage != PackageManager.PERMISSION_GRANTED && permissionWriteExternalStorage != PackageManager.PERMISSION_GRANTED) {
@@ -536,6 +618,52 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
             return s;
         } else {
             return Character.toUpperCase(first) + s.substring(1);
+        }
+    }
+
+    public float getDistance(Pair pair) {
+        if (deviceLocation != null) {
+            float distance[] =  new float[1];
+            Location.distanceBetween(deviceLocation.getLatitude(), deviceLocation.getLongitude(),
+                    pair.getLocation().getLatitude(), pair.getLocation().getLongitude(), distance);
+            return distance[0];
+        }
+        return -1;
+    }
+
+    public void deletePair(Pair pair) {
+        pairs.remove(pair);
+        pairsAdapter.notifyDataSetChanged();
+        saveToPreferences(Command.LISTPAIRS, pairs);
+    }
+
+    class PairNameComparator implements Comparator<Pair>{
+
+        @Override
+        public int compare(Pair p1, Pair p2) {
+            return p1.getName().compareTo(p2.getName());
+        }
+    }
+
+    class PairLastAccessedComparator implements Comparator<Pair>{
+
+        @Override
+        public int compare(Pair p1, Pair p2) {
+            return p1.getLastAccessed().compareTo(p2.getLastAccessed());
+        }
+    }
+
+    class PairDistanceComparator implements Comparator<Pair>{
+
+        @Override
+        public int compare(Pair p1, Pair p2) {
+            float[] results1 = new float[1];
+            float[] results2 = new float[1];
+            Location.distanceBetween(deviceLocation.getLatitude(), deviceLocation.getLongitude(),
+                    p1.getLocation().getLatitude(), p1.getLocation().getLongitude(), results1);
+            Location.distanceBetween(deviceLocation.getLatitude(), deviceLocation.getLongitude(),
+                    p2.getLocation().getLatitude(), p2.getLocation().getLongitude(), results2);
+            return Float.compare(results1[0], results2[0]);
         }
     }
 

@@ -24,6 +24,19 @@
         android:paddingRight="10dp"
         android:textSize="20sp" />
 
+    <TextView
+        android:id="@+id/pair_distance"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginLeft="10dp"
+        android:layout_weight="1"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:textAlignment="textEnd"
+        android:textSize="20sp"
+        tools:text="" />
+
     <Button
         android:layout_gravity="center_vertical"
         android:id="@+id/status_button"
@@ -34,4 +47,13 @@
         android:paddingLeft="30dp"
         android:paddingRight="30dp"
         android:textSize="10sp" />
+
+    <ImageView
+        android:id="@+id/delete"
+        android:layout_gravity="center_vertical"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:src="@drawable/delete" />
 </LinearLayout>

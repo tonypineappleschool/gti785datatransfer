@@ -6,17 +6,25 @@
         android:icon="@drawable/qr_code"
         android:showAsAction="ifRoom"
         android:title="@string/generate"
-        app:showAsAction="always" />
+        app:showAsAction="ifRoom" />
     <item
         android:id="@+id/register"
         android:icon="@drawable/scan"
         android:showAsAction="ifRoom"
-        android:title="@string/register" />
+        android:title="@string/register"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/add"
+        android:icon="@drawable/add"
+        android:showAsAction="ifRoom"
+        android:title="@string/add"
+        app:showAsAction="ifRoom" />
     <item
         android:id="@+id/sortByName"
         android:icon="@drawable/sort"
         android:showAsAction="ifRoom"
-        android:title="@string/sortByName">
+        android:title="@string/sortByName"
+        app:showAsAction="always">
         <menu>
             <item
                 android:id="@+id/action_sortName"
@@ -29,7 +37,4 @@
                 android:title="@string/sortLastAccessed" />
         </menu>
     </item>
-    <item android:id="@+id/sortByDistance"
-        android:title="@string/sortByDistance"
-        android:showAsAction="ifRoom"/>
 </menu>

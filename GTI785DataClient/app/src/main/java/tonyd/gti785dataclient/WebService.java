@@ -47,11 +47,22 @@ public class WebService extends Service {
 
     @Override
     public void onCreate() {
+        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+        String ipAddress = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
+        serverLocation = new ServerLocation(this, getApplicationContext(), ipAddress);
+        serverFiles = new ServerFiles(this, getApplicationContext(), ipAddress);
+        try {
+            serverLocation.start();
+            serverFiles.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        Toast.makeText(this, "Service listening on " + ipAddress + ":" + serverLocation.getListeningPort(), Toast.LENGTH_LONG).show();
+
         broadcaster = LocalBroadcastManager.getInstance(this);
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
         locationListener = new LocationListener() {
             public void onLocationChanged(Location location) {
-                // if (deviceLocation != null /* || deviceLocation.distanceTo(location) > 5.0f */) {
                     deviceLocation = location;
                     Pair.Location customLocation = new Pair.Location(location.getLongitude(), location.getLatitude());
                     if (serverLocation.getLbq() != null) {
@@ -80,7 +91,9 @@ public class WebService extends Service {
             // Check Permissions Now
             return;
         }
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+
         deviceLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
     }
 
@@ -89,18 +102,7 @@ public class WebService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
-        String ipAddress = Formatter.formatIpAddress(wm.getConnectionInfo().getIpAddress());
-        serverLocation = new ServerLocation(this, getApplicationContext(), ipAddress);
-        serverFiles = new ServerFiles(this, getApplicationContext(), ipAddress);
-        try {
-            serverLocation.start();
-            serverFiles.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        Toast.makeText(this, "Service listening on port " + serverLocation.getListeningPort(), Toast.LENGTH_LONG).show();
-        return mBinder;
+        return null;
     }
 
     @Override

@@ -64,15 +64,7 @@ public class RequestAsyncTaskFolderContent extends AsyncTask<String, Void, Strin
             Log.d("RESPONSE CODE", Integer.toString(responseCode));
 
             if (responseCode == 200){
-                if (command.equals(Command.POLL)){
-                    String responseMessage = conn.getResponseMessage();
-
-                    BufferedReader in = new BufferedReader(
-                            new InputStreamReader(conn.getInputStream()));
-                    Gson gson = new Gson();
-                    Location location = gson.fromJson(in, Location.class);
-                    updateLocation(location, pairID);
-                } else if (command.equals(Command.FILES)) {
+                if (command.equals(Command.FILES)) {
                     String contentType = conn.getContentType();
                     if (contentType.equals("application/octet-stream")) {
                         // it is a file
@@ -116,22 +108,9 @@ public class RequestAsyncTaskFolderContent extends AsyncTask<String, Void, Strin
         return new URL(url, relURL);
     }
 
-    private void updateLocation(Location location, int pairID) {
-        Intent intent = new Intent(Command.COMMAND);
-        intent.putExtra(Command.COMMAND, Command.LOCATION);
-        intent.putExtra("location", location);
-        intent.putExtra("pairID", pairID);
-        broadcaster.sendBroadcast(intent);
-    }
-
     @Override
     protected void onPostExecute(String result) {
-        sendRequest();
-    }
 
-    private void sendRequest() {
-        if (command == Command.POLL)
-            new RequestAsyncTaskFolderContent(context, pairID, ipAddress, port).execute(Command.POLL, "");
     }
 
 }
