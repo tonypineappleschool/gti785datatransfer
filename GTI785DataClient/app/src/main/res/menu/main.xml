@@ -20,6 +20,12 @@
         android:title="@string/add"
         app:showAsAction="ifRoom" />
     <item
+        android:id="@+id/updates"
+        android:icon="@drawable/info"
+        android:showAsAction="ifRoom"
+        android:title="@string/updates"
+        app:showAsAction="ifRoom" />
+    <item
         android:id="@+id/sortByName"
         android:icon="@drawable/sort"
         android:showAsAction="ifRoom"

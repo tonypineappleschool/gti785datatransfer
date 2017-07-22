@@ -4,6 +4,7 @@ public final class Command {
     public static final String STATUS = "status";
     public static final String LOCATION = "location";
     public static final String POLL = "poll";
+    public static final String SYNC = "sync";
     public static final String FILES = "files";
     public static final String FOLDERCONTENT = "folderContent";
     public static final String COMMAND = "command";
@@ -16,5 +17,10 @@ public final class Command {
     public static final String CONNECTED = "connected";
 
     public static final String LISTPAIRS = "listpairs";
+
+    public static final String NOTIFID = "notificationID";
+
+    public static final String HASHMAPSYNC = "hashmapsync";
+
 }
 

@@ -87,6 +87,11 @@ public class ServerFiles extends NanoHTTPD {
                     String serializedFolderContent = gson.toJson(folderContent);
                     return Response.newFixedLengthResponse(serializedFolderContent);
                 }
+            case Command.LOCATION:
+                Gson gson = new Gson();
+                Pair.Location location = new Pair.Location(service.getDeviceLocation().getLongitude(), service.getDeviceLocation().getLatitude());
+                String serializedLocation = gson.toJson(location);
+                return Response.newFixedLengthResponse(serializedLocation);
         }
         return Response.newFixedLengthResponse(Status.REQUEST_TIMEOUT, "text/html", "timeout");
     }

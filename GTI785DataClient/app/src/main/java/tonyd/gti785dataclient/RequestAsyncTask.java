@@ -9,14 +9,17 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Random;
 
 /**
@@ -66,7 +69,7 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
             Log.d("RESPONSE CODE", Integer.toString(responseCode));
             setConnected(pairID, true);
             if (responseCode == 200){
-                if (command.equals(Command.POLL)) {
+                if (command.equals(Command.LOCATION)) {
                     String responseMessage = conn.getResponseMessage();
 
                     BufferedReader in = new BufferedReader(
@@ -74,6 +77,16 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
                     Gson gson = new Gson();
                     Pair.Location location = gson.fromJson(in, Pair.Location.class);
                     updateLocation(location, pairID);
+                } else if (command.equals(Command.POLL)){
+                    String responseMessage = conn.getResponseMessage();
+
+                    BufferedReader in = new BufferedReader(
+                            new InputStreamReader(conn.getInputStream()));
+                    Gson gson = new Gson();
+                    Type type = new TypeToken<ArrayList<FileSync>>() {
+                    }.getType();
+                    ArrayList<FileSync> fileSyncs = gson.fromJson(in, type);
+                    sendNotifications(fileSyncs, pairID);
                 }
                 else if (command.equals(Command.FILES)) {
                     String contentType = conn.getContentType();
@@ -98,21 +111,30 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
             setConnected(pairID, false);
 
         }
-
         return null;
-
     }
+
+    private void sendNotifications(ArrayList<FileSync> fileSyncs, int pairID) {
+        Intent intent = new Intent(Command.COMMAND);
+        intent.putExtra(Command.COMMAND, Command.SYNC);
+        intent.putExtra(Command.SYNC, fileSyncs);
+        intent.putExtra(Command.PAIRID, pairID);
+        intent.putExtra(Command.NOTIFID, getSaltString());
+        broadcaster.sendBroadcast(intent);
+    }
+
     private void setConnected(int pairID, boolean connected) {
         if (!connected){
             Intent intent = new Intent(Command.COMMAND);
             intent.putExtra(Command.COMMAND, Command.DISCONNECTED);
-            intent.putExtra("pairID", pairID);
-            intent.putExtra("notificationID", getSaltString());
+            intent.putExtra(Command.PAIRID, pairID);
+            intent.putExtra(Command.NOTIFID, getSaltString());
             broadcaster.sendBroadcast(intent);
         } else {
             Intent intent = new Intent(Command.COMMAND);
             intent.putExtra(Command.COMMAND, Command.CONNECTED);
-            intent.putExtra("pairID", pairID);
+            intent.putExtra(Command.PAIRID, pairID);
+            intent.putExtra(Command.NOTIFID, getSaltString());
             broadcaster.sendBroadcast(intent);
         }
     }
@@ -120,9 +142,9 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
     private void updateView(FolderContent folderContent, int pairID) {
         Intent intent = new Intent(Command.COMMAND);
         intent.putExtra(Command.COMMAND, Command.FOLDERCONTENT);
-        intent.putExtra("folderContent", folderContent);
-        intent.putExtra("pairID", pairID);
-        intent.putExtra("notificationID", getSaltString());
+        intent.putExtra(Command.FOLDERCONTENT, folderContent);
+        intent.putExtra(Command.PAIRID, pairID);
+        intent.putExtra(Command.NOTIFID, getSaltString());
         broadcaster.sendBroadcast(intent);
     }
 
@@ -140,8 +162,8 @@ public class RequestAsyncTask extends AsyncTask<String, Void, String> {
         Intent intent = new Intent(Command.COMMAND);
         intent.putExtra(Command.COMMAND, Command.LOCATION);
         intent.putExtra("location", location);
-        intent.putExtra("pairID", pairID);
-        intent.putExtra("notificationID", getSaltString());
+        intent.putExtra(Command.PAIRID, pairID);
+        intent.putExtra(Command.NOTIFID, getSaltString());
 
         broadcaster.sendBroadcast(intent);
     }

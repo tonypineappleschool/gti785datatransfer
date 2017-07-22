@@ -59,8 +59,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity implements WebServiceCallbacks {
 
@@ -72,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
     private ViewGroup linearLayout;
     private PairsAdapter pairsAdapter;
     protected Location deviceLocation;
+    private HashMap<Pair, ArrayList<FileSync>> fileSyncHashMap;
 
     private SharedPreferences sharedPreferences;
 
@@ -125,6 +129,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                 // Called when a new location is found by the network location provider.
                 deviceLocation = location;
                 Toast.makeText(getApplicationContext(), "Location Updated", Toast.LENGTH_LONG).show();
+                pairsAdapter.notifyDataSetChanged();
             }
 
             public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -153,6 +158,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
             deviceLocation = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         }
 
+
     }
 
     @Override
@@ -162,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
         receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                String id = intent.getStringExtra("notificationID");
+                String id = intent.getStringExtra(Command.NOTIFID);
                 if (mySet.contains(id))
                     return;
                 mySet.add(id);
@@ -199,12 +205,6 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                             pair.getLocation().setLatitude(location.getLatitude());
                             pair.getLocation().setLongitude(location.getLongitude());
                             pairsAdapter.notifyDataSetChanged();
-                            Handler handler = new Handler();
-                            handler.postDelayed(new Runnable() {
-                                public void run() {
-                                    sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
-                                }
-                            }, 2000);
                         }
                         break;
                     case Command.FOLDERCONTENT:
@@ -216,6 +216,13 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                             findPairById(pairID).setLastAccessed(new Date());
                             startFolderContentActivity(folderContent, pairID);
                         }
+                        break;
+                    case Command.SYNC:
+                        pairID = intent.getIntExtra("pairID", -1);
+                        pair = findPairById(pairID);
+                        ArrayList<FileSync> fileSyncs = intent.getParcelableArrayListExtra(Command.SYNC);
+                        Toast.makeText(getApplicationContext(), "Modifications detected", Toast.LENGTH_LONG).show();
+                        fileSyncHashMap.get(pair).addAll(fileSyncs);
                 }
             }
         };
@@ -236,17 +243,20 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                 if (vh != null){
                     Pair pair = pairs.get(i);
                     vh.statusButton.setOnClickListener(v -> {
-                        int pairID = pair.getId();
-                        sendRequest(pairID, pair.getIp(), "4000", Command.FILES, "");
+                        sendRequest(pair.getId(), pair.getIp(), "4000", Command.FILES, "");
                     });
                 }
             }
         },2000);
+        fileSyncHashMap = new HashMap<>();
         for (Pair p : pairs){
-            int pairID = p.getId();
-            sendRequest(pairID, p.getIp(), Integer.toString(p.getPort()), Command.POLL, "");
+            ArrayList<FileSync> fileSyncs= new ArrayList<>();
+            fileSyncHashMap.put(p, fileSyncs);
+            sendRequest(p.getId(), p.getIp(), Integer.toString(p.getPort()), Command.POLL, "");
         }
-
+        Timer time = new Timer(); // Instantiate Timer Object
+        LocationTask st = new LocationTask(); // Instantiate SheduledTask class
+        time.schedule(st, 0, 5000); // Create Repetitively task for every 1 secs
     }
 
     @Override
@@ -305,9 +315,18 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
             case R.id.add:
                 addManually();
                 return true;
+            case R.id.updates:
+                checkUpdates();
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void checkUpdates() {
+        Intent intent = new Intent(this, UpdatesActivity.class);
+        intent.putExtra(Command.HASHMAPSYNC, fileSyncHashMap);
+        startActivity(intent);
     }
 
     private void addManually() {
@@ -341,11 +360,13 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
             Pair pair = parse(jsonString);
             if (!alreadyExist(pair)) {
                 pairs.add(pair);
-                int pairID = pair.getId();
+                ArrayList<FileSync> fileSyncs = new ArrayList<FileSync>();
+                fileSyncHashMap.put(pair, fileSyncs);
                 // Notify the adapter that an item was inserted at position 0
                 pairsAdapter.notifyDataSetChanged();
                 saveToPreferences(Command.LISTPAIRS, pairs);
-                sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
+                sendRequest(pair.getId(), pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
+
             }
             dialog.dismiss();
         });
@@ -483,11 +504,12 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                 Pair pair = parse(result.getContents());
                 if (!alreadyExist(pair)) {
                     pairs.add(pair);
-                    int pairID = pair.getId();
+                    ArrayList<FileSync> fileSyncs = new ArrayList<FileSync>();
+                    fileSyncHashMap.put(pair, fileSyncs);
                     // Notify the adapter that an item was inserted at position 0
                     pairsAdapter.notifyDataSetChanged();
                     saveToPreferences(Command.LISTPAIRS, pairs);
-                    sendRequest(pairID, pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
+                    sendRequest(pair.getId(), pair.getIp(), Integer.toString(pair.getPort()), Command.POLL, "");
                 }
             }
         } else {
@@ -653,7 +675,7 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
         }
     }
 
-    class PairDistanceComparator implements Comparator<Pair>{
+    class PairDistanceComparator implements Comparator<Pair> {
 
         @Override
         public int compare(Pair p1, Pair p2) {
@@ -664,6 +686,15 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
             Location.distanceBetween(deviceLocation.getLatitude(), deviceLocation.getLongitude(),
                     p2.getLocation().getLatitude(), p2.getLocation().getLongitude(), results2);
             return Float.compare(results1[0], results2[0]);
+        }
+    }
+
+    public class LocationTask extends TimerTask{
+        @Override
+        public void run() {
+            for (Pair p : pairs){
+                sendRequest(p.getId(), p.getIp(), "4000", Command.LOCATION, "");
+            }
         }
     }
 

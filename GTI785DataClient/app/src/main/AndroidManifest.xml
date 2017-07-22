@@ -29,6 +29,9 @@
         <activity android:name=".FolderContentActivity">
 
         </activity>
+        <activity android:name=".UpdatesActivity">
+
+        </activity>
         <service android:name=".WebService" />
     </application>
 

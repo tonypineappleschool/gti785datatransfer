@@ -57,7 +57,7 @@ public class ServerLocation extends NanoHTTPD {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                if (o == null){
+                if (o == null) {
                     Log.d("LBQ", "Poll returns null");
                 } else {
                     String serializedObject = gson.toJson(o);
@@ -66,6 +66,7 @@ public class ServerLocation extends NanoHTTPD {
                 }
                 lbq = null;
                 return Response.newFixedLengthResponse(Status.REQUEST_TIMEOUT, "text/html", "timeout");
+
         }
         return Response.newFixedLengthResponse(Status.REQUEST_TIMEOUT, "text/html", "timeout");
     }

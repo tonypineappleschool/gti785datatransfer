@@ -11,6 +11,7 @@ import android.location.LocationManager;
 import android.net.wifi.WifiManager;
 import android.os.Binder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -18,7 +19,13 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.text.format.Formatter;
 import android.widget.Toast;
 
-import java.io.IOException;
+import java.io.*;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Created by tonyd on 5/28/2017.
@@ -34,7 +41,8 @@ public class WebService extends Service {
     private LocalBroadcastManager broadcaster;
     private LocationManager locationManager;
     private LocationListener locationListener;
-
+    protected ArrayList<FileSync> fileSyncs;
+    private  ArrayList<File> allFiles;
     public Location getDeviceLocation() {
         return deviceLocation;
     }
@@ -66,14 +74,13 @@ public class WebService extends Service {
                     deviceLocation = location;
                     Toast.makeText(getApplicationContext(), "Location Web Service Updated", Toast.LENGTH_LONG).show();
                     Pair.Location customLocation = new Pair.Location(location.getLongitude(), location.getLatitude());
-                    if (serverLocation.getLbq() != null) {
-                        try {
-                            serverLocation.getLbq().put(customLocation);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
+//                    if (serverLocation.getLbq() != null) {
+//                        try {
+//                            serverLocation.getLbq().put(customLocation);
+//                        } catch (InterruptedException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
             }
 
             public void onStatusChanged(String provider, int status, Bundle extras) {
@@ -96,9 +103,14 @@ public class WebService extends Service {
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
 
         deviceLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+        fileSyncs = new ArrayList<>();
+        allFiles = (ArrayList<File>) getListFiles(new File(Environment.getExternalStorageDirectory().getAbsolutePath()));
+        Timer time = new Timer();
+        SyncTask st = new SyncTask(); // Instantiate SheduledTask class
+        time.schedule(st, 0, 5000); // Create Repetitively task for every 1 secs
+
     }
-
-
 
     @Nullable
     @Override
@@ -131,4 +143,44 @@ public class WebService extends Service {
         webServiceCallbacks = callbacks;
     }
 
+    public class SyncTask extends TimerTask {
+        public void run() {
+            fileSyncs = new ArrayList<>();
+            ArrayList<File> currentFiles = (ArrayList<File>) getListFiles(new File(Environment.getExternalStorageDirectory().getAbsolutePath()));
+            for (File f : currentFiles){
+                if (!allFiles.contains(f)){
+                    fileSyncs.add(new FileSync(f.getAbsolutePath(), new Date(f.lastModified()), (int) f.length(), FileSync.Status.ADDED));
+                }
+            }
+            for (File f : allFiles){
+                if (!currentFiles.contains(f)){
+                    fileSyncs.add(new FileSync(f.getAbsolutePath(), new Date(f.lastModified()), (int) f.length(), FileSync.Status.DELETED));
+                }
+            }
+            allFiles.clear();
+            allFiles.addAll(currentFiles);
+            if (fileSyncs.size() > 0 ){
+                try {
+                    if (serverLocation.getLbq() != null) {
+                        serverLocation.getLbq().put(fileSyncs);
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private List<File> getListFiles(File parentDir) {
+        ArrayList<File> inFiles = new ArrayList<File>();
+        File[] files = parentDir.listFiles();
+        for (File file : files) {
+            if (file.isDirectory()) {
+                inFiles.addAll(getListFiles(file));
+            } else {
+                inFiles.add(file);
+            }
+        }
+        return inFiles;
+    }
 }
