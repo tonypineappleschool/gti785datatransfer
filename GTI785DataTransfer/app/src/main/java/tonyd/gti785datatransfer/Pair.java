@@ -18,6 +18,8 @@ public class Pair implements Parcelable {
     private Date lastAccessed;
     private Location location;
 
+    private boolean online;
+
     public Pair(int id, String name, String ip, int port, Date lastAccessed){
         this.id = id;
         this.name = name;
@@ -25,6 +27,8 @@ public class Pair implements Parcelable {
         this.port = port;
         this.lastAccessed = lastAccessed;
         this.location = new Location(0.0, 0.0);
+
+        this.online = (Math.random() > 0.5);
     }
 
     protected Pair(Parcel in) {
@@ -121,6 +125,14 @@ public class Pair implements Parcelable {
         dest.writeInt(port);
         dest.writeLong(lastAccessed.getTime());
         dest.writeParcelable(location, flags);
+    }
+
+    public boolean isOnline() {
+        return online;
+    }
+
+    public void setOnline(boolean online) {
+        this.online = online;
     }
 
     public static class Location implements Parcelable{

@@ -15,6 +15,9 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
+import android.support.v7.widget.DividerItemDecoration;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -156,6 +159,42 @@ public class MainActivity extends Activity {
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
         currentLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
+
+        RecyclerView recycler = (RecyclerView) findViewById(R.id.pair);
+        PairAdapter adapter = new PairAdapter(pairs);
+        recycler.setAdapter(adapter);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        recycler.setLayoutManager(linearLayoutManager);
+
+        recycler.addItemDecoration(new DividerItemDecoration(recycler.getContext(),
+                linearLayoutManager.getOrientation()));
+
+
+        pairs.add(new Pair(123456,
+                "tony 1",
+                //"192.168.43.182",
+                "192.168.43.84",
+                8080,
+                //5000,
+                new Date()));
+
+        pairs.add(new Pair(123456,
+                "tony 2",
+                //"192.168.43.182",
+                "192.168.43.84",
+                8080,
+                //5000,
+                new Date()));
+
+        pairs.add(new Pair(123456,
+                "tony 3d",
+                //"192.168.43.182",
+                "192.168.43.84",
+                8080,
+                //5000,
+                new Date()));
+
+
     }
 
     private void startFolderContentActivity(FolderContent folderContent, int pairID) {
@@ -177,8 +216,10 @@ public class MainActivity extends Activity {
         try {
             Pair pair = new Pair(123456,
                     "tony",
-                    "192.168.43.182",
-                    5000,
+                    //"192.168.43.182",
+                    "192.168.43.84",
+                    8080,
+                    //5000,
                     df.parse("09/09/1999"));
             if (!alreadyExist(pair)) {
                 pairs.add(pair);
@@ -253,14 +294,19 @@ public class MainActivity extends Activity {
     }
 
     private void addPairUI(final Pair pair) {
+
         LinearLayout LL = new LinearLayout(this);
         LL.setOrientation(LinearLayout.HORIZONTAL);
-        LayoutParams LLParams = new LayoutParams(LayoutParams.MATCH_PARENT,LayoutParams.WRAP_CONTENT);
+        LayoutParams LLParams = new LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT);
         LL.setLayoutParams(LLParams);
 
         TextView textViewName = new TextView(this);
         textViewName.setText(pair.getName());
-        LayoutParams TVParams = new LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.MATCH_PARENT);
+        LayoutParams TVParams = new ViewGroup.LayoutParams(
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.MATCH_PARENT);
         textViewName.setLayoutParams(TVParams);
         textViewName.setPadding(10,10,10,10);
 
