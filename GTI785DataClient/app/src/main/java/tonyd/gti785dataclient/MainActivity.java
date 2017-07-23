@@ -29,6 +29,7 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.format.Formatter;
@@ -264,6 +265,12 @@ public class MainActivity extends AppCompatActivity implements WebServiceCallbac
                 }
             }
         },2000);
+        //ajout d'une ligne entre chaque "ami" mais ça reste à être testé avec plusieurs personnes
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        rvPairs.setLayoutManager(linearLayoutManager);
+        rvPairs.addItemDecoration(new DividerItemDecoration(rvPairs.getContext(),
+                linearLayoutManager.getOrientation()));
+        //fin de l'ajout
         fileSyncHashMap = new HashMap<>();
         for (Pair p : pairs){
             ArrayList<FileSync> fileSyncs= new ArrayList<>();
